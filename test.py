@@ -1,4 +1,4 @@
-url = 'zk://localhost:2181'
+url = 'localhost:5050'
 d = {
     "type": "SUBSCRIBE",
     "subscribe": {
@@ -9,46 +9,30 @@ d = {
     }
 }
 
-from malefico.core.scheduler import SchedulerDriver
 from malefico.core.interface import Scheduler
+from malefico.core.scheduler import SchedulerDriver
+
+TASK_CPU = 0.1
+TASK_MEM = 32
+EXECUTOR_CPUS = 0.1
+EXECUTOR_MEM = 32
 
 
-class WEEE(object):
-    def __init__(self):
+class WEEE(Scheduler):
+    def __init__(self, executor):
         pass
 
-    def on_registered(self, framework_id, master):
-        pass
+    def on_heartbeat(self, driver, message):
+        print(message)
 
-    def on_reregistered(self, framework_id, master):
-        pass
+    def on_offers(self, driver, offers):
+        print(offers)
 
-    def on_disconnected(self, driver):
-        pass
-
-    def on_offers(self, offers):
-        pass
-
-    def on_rescinded(offer_id):
-        pass
-
-    def on_update(self, status):
-        pass
-
-    def on_message(self, executor_id, slave_id, message):
-        pass
-
-    def on_slave_lost(self, slave_id):
-        pass
-
-    def on_executor_lost(self, executor_id, slave_id, status):
-        pass
-
-    def on_error(self, message):
+    def on_rescinded(self, driver, offer_id):
         pass
 
 
-sched = SchedulerDriver(url, WEEE(), "Test", "arti")
+sched = SchedulerDriver(url, WEEE(1), "Test", "arti")
 
 sched.start()
 import time

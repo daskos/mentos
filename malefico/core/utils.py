@@ -1,9 +1,12 @@
 from __future__ import print_function, division, absolute_import
-from contextlib import contextmanager
-from tornado.httpclient import HTTPClient
-from tornado.escape import json_decode as decode
-from tornado import gen
+
 import logging
+from contextlib import contextmanager
+
+from tornado import gen
+from tornado.escape import json_decode as decode
+from tornado.httpclient import HTTPClient
+
 logger = logging.getLogger(__name__)
 
 
@@ -45,21 +48,6 @@ def get_master(children):
     seq = min(children)
     return seq
 
-# def master_info(uri,info={}):
-#     master_info={"address":{}}
-#     hostport = uri.split(":")
-#     if len(hostport) == 2:
-#         master_info["address"]["hostname"] = hostport[0]
-#         master_info["address"]["port"] = int(hostport[1])
-#     else:
-#         master_info["address"]["hostname"] = hostport[0]
-#         master_info["address"]["port"] = 5050
-#     if "version" in info:
-#        master_info["version"] = info["version"]
-#     else:
-#         master_info["version"] = get_master_version(uri)
-#     return master_info
-
 def master_info(uri):
     master_info={"address":{}}
     hostport = uri.split(":")
@@ -81,3 +69,34 @@ def get_http_master_url(master):
     port = master["address"]["port"]
 
     return "http://{host}:{port}".format(host=host, port=port)
+
+
+POSTFIX = {
+    'ns': 1e-9,
+    'us': 1e-6,
+    'ms': 1e-3,
+    'secs': 1,
+    'mins': 60,
+    'hrs': 60 * 60,
+    'days': 24 * 60 * 60,
+    'weeks': 7 * 24 * 60 * 60
+}
+
+
+def parse_duration(s):
+    s = s.strip()
+    unit = None
+    postfix = None
+    for n, u in POSTFIX.items():
+        if s.endswith(n):
+            unit = u
+            postfix = n
+            break
+
+    assert unit is not None, \
+        'Unknown duration \'%s\'; supported units are %s' % (
+            s, ','.join('\'%s\'' % n for n in POSTFIX)
+        )
+
+    n = float(s[:-len(postfix)])
+    return n * unit

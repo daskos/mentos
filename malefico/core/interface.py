@@ -104,8 +104,8 @@ class Scheduler(object):
         ----------
         driver: SchedulerDriver
             Interface for interacting with Mesos Master
-        offer_id: string
-            The unique identifier of the Mesos offer
+        status: string
+            Task Status
         """
         pass
 
@@ -167,6 +167,17 @@ class Scheduler(object):
         ----------
         driver: SchedulerDriver
             Interface for interacting with Mesos Master
+        message: string
+            Arbitrary byte stream
+        """
+        pass
+
+    def on_heartbeat(self, driver, message):
+        """Event handler triggered when a heartbeat is recieved from the Master.
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Slave
         message: string
             Arbitrary byte stream
         """
