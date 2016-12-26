@@ -43,8 +43,8 @@ class MesosExecutorDriver(MesosConnection):
         self.updates = {}
 
         self.executor = executor
-
-        self.outbound_connection = BacklogClient(self.loop)
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+        self.outbound_connection = AsyncHTTPClient(self.loop)
         #self.outbound_connection = HTTPClient()
         self._handlers = {
             "SUBSCRIBED": self.on_subscribed,
@@ -57,6 +57,7 @@ class MesosExecutorDriver(MesosConnection):
             "ERROR": self.on_error,
             "CLOSE": self.on_close
         }
+
 
     def gen_request(self, handler):
         payload = encode({
@@ -86,6 +87,7 @@ class MesosExecutorDriver(MesosConnection):
         return subscription_r
 
     def _send(self, payload):
+
         data = encode(payload)
 
         def handle_response(response):
@@ -98,15 +100,13 @@ class MesosExecutorDriver(MesosConnection):
             'connection': 'close',
             'content-length': len(data)
         }
-
-
-        self.client.fetch(
+        self.outbound_connection.fetch(
             HTTPRequest(
                 url=self.leading_master + "/api/v1/executor",
                 body=data,
                 method='POST',
                 headers=headers,
-            ), handle_response
+            ),handle_response
         )
 
     def update(self, status):

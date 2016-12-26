@@ -37,7 +37,7 @@ class MesosSchedulerDriver(MesosConnection):
 
         self.implicit_acknowledgements = implicit_acknowledgements
 
-        self.outbound_connection = AsyncHTTPClient()
+        self.outbound_connection = AsyncHTTPClient(self.loop)
 
         self._handlers = {
             "SUBSCRIBED": self.on_subscribed,
@@ -76,14 +76,9 @@ class MesosSchedulerDriver(MesosConnection):
             'Mesos-Stream-Id': self.mesos_stream_id
         }
 
-        self.client.fetch(
-            HTTPRequest(
-                url=self.leading_master + "/api/v1/scheduler",
-                body=data,
-                method='POST',
-                headers=headers,
-            ), handle_response
-        )
+        self.outbound_connection.fetch(self.leading_master + "/api/v1/scheduler", handle_response, method='POST',
+                                       headers=headers, body=data)
+
     def request(self, requests):
         """
         """
@@ -488,8 +483,8 @@ class MesosSchedulerDriver(MesosConnection):
                                                  },
                                                  follow_redirects=False)
 
-                    #http_client = AsyncHTTPClient()
-                    self.client.fetch(check_master_r, get_actual_master)
+                    http_client = AsyncHTTPClient()
+                    yield http_client.fetch(check_master_r, get_actual_master)
 
             except HTTPError as ex:
                 if ex.code == "307":

@@ -41,6 +41,7 @@ class MinimalExecutor(Executor):
             driver.update(update)
 
         thread = Thread(target=run_task, args=(task,))
+        thread.daemon = True
         thread.start()
 
 

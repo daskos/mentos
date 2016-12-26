@@ -11,7 +11,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from malefico.core.utils import log_errors,BacklogClient
+from malefico.core.utils import log_errors
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +26,6 @@ class MesosConnection(object):
         self.mesos_stream_id = None
         self.detector = None
         self.buffer = deque()
-
-        self.client = BacklogClient(loop)
-
         self._handlers = {}
         self.leading_master = leading_master
 
@@ -60,7 +57,7 @@ class MesosConnection(object):
             while not self.leading_master:
                 yield gen.sleep(0.01)
 
-            #client = AsyncHTTPClient()
+            client = AsyncHTTPClient()
             h = HTTPHeaders()
 
             def header_callback(response):
@@ -77,7 +74,7 @@ class MesosConnection(object):
 
             try:
                 subscription_r = self.gen_request(header_callback)
-                self.client.fetch(subscription_r)
+                yield client.fetch(subscription_r)
                 self.status = 'connecting'
             except HTTPError as ex:
                 if ex.code == 599:
@@ -159,9 +156,8 @@ class MesosConnection(object):
         # TODO Not thread-safe?
         if self.status == 'closed':
             return
-        self.tear
         if self.detector:
-            log.warn("Terminiating detector")
+            log.warn("Terminating detector")
             self.loop.add_callback(self.detector.close)
 
         log.warn("Terminating scheduler")
