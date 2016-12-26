@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 
 class Scheduler(object):
@@ -20,7 +18,6 @@ class Scheduler(object):
         -------
         self
         """
-        pass
 
     def on_reregistered(self, driver, framework_id, master):
         """Event handler triggered when the scheduler re-registers with a newly
@@ -36,7 +33,6 @@ class Scheduler(object):
         master : Master
             Information about the master itself
         """
-        pass
 
     def on_disconnected(self, driver):
         """Event handler triggereg when the scheduler becomes disconnected from
@@ -47,7 +43,6 @@ class Scheduler(object):
         driver: SchedulerDriver
             Interface for interacting with Mesos Master
         """
-        pass
 
     def on_offers(self, driver, offers):
         """Event handler triggered when resources have been offered to this
@@ -71,7 +66,6 @@ class Scheduler(object):
         offers: list of Offer
             Resource offer instances
         """
-        pass
 
     def on_rescinded(driver, offer_id):
         """Event handler triggered when an offer is no longer valid.
@@ -88,7 +82,6 @@ class Scheduler(object):
         offer_id: string
             The unique identifier of the Mesos offer
         """
-        pass
 
     def on_rescind_inverse(driver, offer_id):
         """Event handler triggered when an offer is no longer valid.
@@ -105,7 +98,6 @@ class Scheduler(object):
         offer_id: string
             The unique identifier of the Mesos offer
         """
-        pass
 
     def on_update(self, driver, status):
         """Event handler triggered when the status of a task has changed.
@@ -126,7 +118,6 @@ class Scheduler(object):
         status: string
             Task Status
         """
-        pass
 
     def on_message(self, driver, executor_id, slave_id, message):
         """Event handler triggered when an executor sends a message.
@@ -143,7 +134,6 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        pass
 
     def on_slave_lost(self, driver, slave_id):
         """Event handler triggered when a slave has been determined unreachable.
@@ -157,7 +147,6 @@ class Scheduler(object):
         slave_id: string
             The unique identifier of the lost Mesos slave
         """
-        pass
 
     def on_executor_lost(self, driver, executor_id, slave_id, status):
         """Event handler triggered when an executor has exited/terminated.
@@ -176,7 +165,6 @@ class Scheduler(object):
         status: int
             TODO: figure it out
         """
-        pass
 
     def on_error(self, driver, message):
         """Event handler triggered when there is an unrecoverable error in the
@@ -189,7 +177,6 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        pass
 
     def on_heartbeat(self, driver, message):
         """Event handler triggered when a heartbeat is recieved from the Master.
@@ -200,8 +187,26 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        pass
 
+    def on_outbound_error(self, driver, response):
+        """Event handler triggered when an error has occured when sending data to the Master
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Slave
+        response: Response
+            Tornado response object
+        """
+
+    def on_outbound_success(self, driver, response):
+        """Event handler triggered when a request was successful when sending data to the Master
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Slave
+        response: Response
+            Tornado response object
+        """
 
 class Executor(object):
 
@@ -226,7 +231,6 @@ class Executor(object):
         slave: Salve
             TODO: write docs
         """
-        pass
 
     def on_reregistered(self, driver, slave):
         """Event handler triggered when the executor re-registers with a
@@ -238,7 +242,6 @@ class Executor(object):
         slave: Slave
             TODO: write docs
         """
-        pass
 
     def on_disconnected(self, driver):
         """Event handler triggered when the executor becomes "disconnected" from
@@ -249,7 +252,6 @@ class Executor(object):
         driver: ExecutorDriver
             Interface for interacting with Mesos Slave
         """
-        pass
 
     def on_launch(self, driver, task):
         """Event handler triggered when a task has been launched on this
@@ -264,7 +266,6 @@ class Executor(object):
         task: Task
             TODO: write docs
         """
-        pass
 
     def on_kill(self, driver, task_id):
         """Event handler triggered when a task running within this executor has
@@ -279,7 +280,6 @@ class Executor(object):
         task_id: string
             Unique identifier of the killed task
         """
-        pass
 
     def on_message(self, driver, message):
         """Event handler triggered when a framework message has arrived for this
@@ -293,7 +293,6 @@ class Executor(object):
         message: string
             Arbitrary byte stream
         """
-        pass
 
     def on_shutdown(self, driver):
         """Event handler triggered when the executor should terminate all of its
@@ -307,7 +306,6 @@ class Executor(object):
         driver: ExecutorDriver
             Interface for interacting with Mesos Slave
         """
-        pass
 
     def on_error(self, driver, message):
         """Event handler triggered when a fatal error has occurred with the
@@ -320,4 +318,22 @@ class Executor(object):
         message: string
             Arbitrary byte stream
         """
-        pass
+    def on_outbound_error(self, driver, response):
+        """Event handler triggered when an error has occured when sending data to the Executor
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Slave
+        response: Response
+            Tornado response object
+        """
+
+    def on_outbound_success(self, driver, response):
+        """Event handler triggered when a request was successful when sending data to the Executor
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Slave
+        response: Response
+            Tornado response object
+        """

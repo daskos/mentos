@@ -1,15 +1,12 @@
 from __future__ import print_function
 
 import sys
-from threading import Thread
 import time
-import uuid
-
-from tornado.escape import json_encode as encode
+from threading import Thread
 
 from malefico.core.executor import MesosExecutorDriver
 from malefico.core.interface import Executor
-from malefico.core.utils import decode_data
+from malefico.utils import decode_data
 
 
 class MinimalExecutor(Executor):
@@ -47,7 +44,7 @@ if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
     # debug
-    time.sleep(10)
+    #time.sleep(20)
     driver = MesosExecutorDriver(MinimalExecutor())
-    driver.start()
-    time.sleep(100000)
+    driver.start(block=True)
+    #time.sleep(100000)

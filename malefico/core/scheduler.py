@@ -1,6 +1,4 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import logging
 import socket
@@ -9,24 +7,20 @@ import six
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
-from tornado.httpclient import HTTPRequest
-
-from malefico.core.connection import MesosConnection
-from malefico.core.utils import encode_data
-from malefico.core.utils import get_http_master_url
-from malefico.core.utils import get_master
-from malefico.core.utils import log_errors
-from malefico.core.utils import master_info
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from zoonado import Zoonado
-from zoonado.exc import ConnectionLoss
-from zoonado.exc import NoNode
+from zoonado.exc import ConnectionLoss, NoNode
+
+from malefico.core.subscriber import Subscriber
+from malefico.utils import (
+    encode_data, get_http_master_url, get_master, log_errors, master_info)
+
+
 
 log = logging.getLogger(__name__)
 
 
-class MesosSchedulerDriver(MesosConnection):
+class MesosSchedulerDriver(Subscriber):
 
     def __init__(self, master, scheduler, name, user='', failover_timeout=100, capabilities=[],
                  implicit_acknowledgements=True, loop=None):
@@ -71,21 +65,25 @@ class MesosSchedulerDriver(MesosConnection):
     def framework_id(self, id):
         self.framework['framework_id'] = dict(value=id)
 
-
+    def _handle_outbound(self,response):
+        if response.code not in (200, 202):
+            log.error("Problem with request to  Master for payload %s" %
+                      response.request.body)
+            log.error(response)
+            self.scheduler.on_outbound_error(self,response)
+        else:
+            self.scheduler.on_outbound_success(self, response)
+            log.debug("Succeed request to master %s" %
+                     response.request.body)
 
     def _send(self, payload):
+
         data = encode(payload)
-
-        def handle_response(response):
-            if response.code not in (200, 202):
-                log.warn("Problem with request to master. %s" % response)
-
         headers = {
-            'content-type': 'application/json',
-            'accept': 'application/json',
-            'connection': 'close',
-            'Mesos-Stream-Id': self.mesos_stream_id
+            'Content-Type': 'application/json'
         }
+        if self.mesos_stream_id:
+            headers['Mesos-Stream-Id'] = self.mesos_stream_id
 
         self.outbound_connection.fetch(
             HTTPRequest(
@@ -93,7 +91,7 @@ class MesosSchedulerDriver(MesosConnection):
                 body=data,
                 method='POST',
                 headers=headers,
-            ), handle_response
+            ), self._handle_outbound
         )
 
     def request(self, requests):
@@ -106,7 +104,7 @@ class MesosSchedulerDriver(MesosConnection):
             "type": "REQUEST",
             "requests": requests
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Request resources from Mesos')
 
     def kill(self, task_id, agent_id):
@@ -126,7 +124,7 @@ class MesosSchedulerDriver(MesosConnection):
                 }
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Kills task {}'.format(task_id))
 
     def reconcile(self, task_id, agent_id):
@@ -162,11 +160,11 @@ class MesosSchedulerDriver(MesosConnection):
             }
             log.warn("Reconciling all tasks ")
         if payload:
-            self._send(payload)
+            self.loop.add_callback(self._send, payload)
         else:
             log.warn("Agent and Task not set")
 
-    def decline(self, offer_ids, filters={}):
+    def decline(self, offer_ids, filters=None):
         """
         """
         decline = {
@@ -183,10 +181,10 @@ class MesosSchedulerDriver(MesosConnection):
             "type": "DECLINE",
             "decline": decline
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Declines offer {}'.format(offer_ids))
 
-    def launch(self, offer_ids, tasks, filters={}):
+    def launch(self, offer_ids, tasks, filters=None):
         if not tasks:
             return self.decline(offer_ids, filters=filters)
 
@@ -199,7 +197,7 @@ class MesosSchedulerDriver(MesosConnection):
 
         self.accept(offer_ids, operations, filters=filters)
 
-    def accept(self, offer_ids, operations, filters={}):
+    def accept(self, offer_ids, operations, filters=None):
         """
         """
         if not operations:
@@ -220,7 +218,7 @@ class MesosSchedulerDriver(MesosConnection):
             "type": "ACCEPT",
             "accept": accept
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Accepts offers {}'.format(offer_ids))
 
     def revive(self):
@@ -232,7 +230,7 @@ class MesosSchedulerDriver(MesosConnection):
             },
             "type": "REVIVE"
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn(
             'Revives; removes all filters previously set by framework')
 
@@ -255,7 +253,7 @@ class MesosSchedulerDriver(MesosConnection):
                 "uuid": status["uuid"]
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Acknowledges status update {}'.format(status))
 
     def message(self, executor_id, agent_id, message):
@@ -276,7 +274,7 @@ class MesosSchedulerDriver(MesosConnection):
                 "data": encode_data(message)
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn('Sends message `{}` to executor `{}` on agent `{}`'.format(
             message, executor_id, agent_id))
 
@@ -297,7 +295,7 @@ class MesosSchedulerDriver(MesosConnection):
                 }
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn("Sent shutdown signal")
 
     def teardown(self, framework_id):
@@ -310,9 +308,8 @@ class MesosSchedulerDriver(MesosConnection):
             "type": "TEARDOWN"
         }
 
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         log.warn("Sent teardown signal")
-
 
     def on_error(self, event):
         message = event['message']
@@ -373,13 +370,13 @@ class MesosSchedulerDriver(MesosConnection):
                 agent_id, failure['status']
             )
 
-
     @gen.coroutine
     def _handle_events(self, message):
         with log_errors():
             try:
                 if message["type"] in self._handlers:
                     _type = message['type']
+                    log.warn("Got event of type %s" % _type)
                     if _type == "HEARTBEAT":
                         self._handlers[_type](message)
                     else:
@@ -392,22 +389,22 @@ class MesosSchedulerDriver(MesosConnection):
                 log.exception(ex)
 
     def gen_request(self, handler):
-        payload = encode({
+        data = encode({
             'type': 'SUBSCRIBE',
             'subscribe': {
                 'framework_info': self.framework
             }
         })
         headers = {
-            'content-type': 'application/json',
-            'accept': 'application/json',
-            'connection': 'close'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Connection': 'close',
+            'Content-Length': str(len(data))
         }
-        #'content-length': len(payload)
         subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/scheduler",
                                      method='POST',
                                      headers=headers,
-                                     body=payload,
+                                     body=data,
                                      streaming_callback=self._handlechunks,
                                      header_callback=handler,
                                      follow_redirects=False,
@@ -451,7 +448,7 @@ class MesosSchedulerDriver(MesosConnection):
                                         data)
                                     self.leading_master = get_http_master_url(
                                         self.leading_master_info)
-                                except NoNode as n:
+                                except NoNode:
                                     log.warn(
                                         "Problem fetching Master node from zookeeper")
 
@@ -460,7 +457,7 @@ class MesosSchedulerDriver(MesosConnection):
                             '/mesos', children_changed)
                         children = yield self.detector.get_children('/mesos')
                         yield children_changed(children)
-                    except ConnectionLoss as n:
+                    except ConnectionLoss:
                         pass
                     except Exception as ex:
                         log.error("Unhandled exception in Detector")

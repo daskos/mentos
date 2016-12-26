@@ -1,36 +1,33 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import logging
 import os
-from os import environ as env
 import signal
-from threading import Thread
 import time
 import uuid
+from os import environ as env
+from threading import Thread
 
 from tornado import gen
-from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPClient
-from tornado.httpclient import HTTPError
-from tornado.httpclient import HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
-from malefico.core.connection import MesosConnection
-from malefico.core.utils import BacklogClient
-from malefico.core.utils import decode_data
-from malefico.core.utils import encode_data
-from malefico.core.utils import log_errors
-from malefico.core.utils import parse_duration
+from malefico.core.subscriber import Subscriber
+from malefico.utils import (
+    decode_data, encode_data, log_errors, parse_duration)
 
 log = logging.getLogger(__name__)
 
 
-class MesosExecutorDriver(MesosConnection):
+class MesosExecutorDriver(Subscriber):
 
     def __init__(self, executor, loop=None):
+        """
+
+        Args:
+            executor ():
+            loop ():
+        """
 
         self.agent_endpoint = "http://"+env['MESOS_AGENT_ENDPOINT']
         super(MesosExecutorDriver, self).__init__(
@@ -69,7 +66,7 @@ class MesosExecutorDriver(MesosConnection):
         }
 
     def gen_request(self, handler):
-        payload = encode({
+        data = encode({
             'type': 'SUBSCRIBE',
             'framework_id': self.framework_id,
             'executor_id': self.executor_id,
@@ -79,41 +76,51 @@ class MesosExecutorDriver(MesosConnection):
             }
         })
         headers = {
-            'content-type': 'application/json',
-            'accept': 'application/json',
-            'connection': 'close'
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Connection': 'close',
+            'Content-Length': str(len(data))
         }
 
         subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/executor",
                                      method='POST',
                                      headers=headers,
-                                     body=payload,
+                                     body=data,
                                      streaming_callback=self._handlechunks,
                                      header_callback=handler,
                                      follow_redirects=False,
                                      request_timeout=1e15)
         return subscription_r
 
+    def _handle_outbound(self, response):
+        if response.code not in (200, 202):
+            log.error("Problem with request to  Executor for payload %s" %
+                      response.request.body)
+            log.error(response)
+            self.executor.on_outbound_error(self, response)
+        else:
+            self.executor.on_outbound_sucess(self, response)
+            log.warn("Succeed request to master %s" %
+                     response.request.body)
+
+
     def _send(self, payload):
 
         data = encode(payload)
 
-        def handle_response(response):
-            if response.code not in (200, 202):
-                log.warn("Problem with request to agent. %s" % response)
-
         headers = {
-            'content-type': 'application/json',
-            'accept': 'application/json',
-            'connection': 'close'
+            'Content-Type': 'application/json'
         }
+        if self.mesos_stream_id:
+            headers['Mesos-Stream-Id'] = self.mesos_stream_id
+
         self.outbound_connection.fetch(
             HTTPRequest(
                 url=self.leading_master + "/api/v1/executor",
                 body=data,
                 method='POST',
                 headers=headers,
-            ), handle_response
+            ), self._handle_outbound
         )
 
     def update(self, status):
@@ -136,7 +143,7 @@ class MesosExecutorDriver(MesosConnection):
                 "status": status
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         logging.info('Executor sends status update {} for task {}'.format(
             status["state"], status["task_id"]))
 
@@ -151,10 +158,8 @@ class MesosExecutorDriver(MesosConnection):
                 "data": encode_data(message)
             }
         }
-        self._send(payload)
+        self.loop.add_callback(self._send, payload)
         logging.info('Driver sends framework message {}'.format(message))
-
-
 
     def on_subscribed(self, info):
         executor_info = info['executor_info']
@@ -224,6 +229,7 @@ class MesosExecutorDriver(MesosConnection):
             try:
                 if message["type"] in self._handlers:
                     _type = message['type']
+                    log.warn("Got event of type %s" % _type)
                     if _type == "SHUTDOWN":
                         self._handlers[_type]()
                     else:

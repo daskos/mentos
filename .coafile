@@ -1,7 +1,10 @@
 [Default]
 default_actions = *: ApplyPatchAction
 [python]
-bears = PEP8Bear,SpaceConsistencyBear,FilenameBear,PyImportSortBear,KeywordBear,PycodestyleBear,PyCommentedCodeBear,PinRequirementsBear,PySafetyBear,PyDocStyleBear
+bears = PEP8Bear,SpaceConsistencyBear,FilenameBear,PyImportSortBear,KeywordBear,PyCommentedCodeBear,PinRequirementsBear,PySafetyBear,PyUnusedCodeBear
 files = **/*.py
 use_spaces = True
 language = python
+remove_all_unused_imports = True
+force_single_line_imports = False
+#PycodestyleBear PyDocStyleBear

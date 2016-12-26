@@ -1,27 +1,22 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-from collections import deque
 import logging
+from collections import deque
 from threading import Thread
 from time import sleep
 
 from tornado import gen
 from tornado.escape import json_decode as decode
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
-from tornado.ioloop import IOLoop
-from tornado.ioloop import PeriodicCallback
+from tornado.ioloop import IOLoop, PeriodicCallback
 
-from malefico.core.utils import log_errors
+from malefico.utils import log_errors
 
-AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 log = logging.getLogger(__name__)
 
 
-class MesosConnection(object):
+class Subscriber(object):
 
     def __init__(self, leading_master=None, loop=None):
 
@@ -40,7 +35,7 @@ class MesosConnection(object):
             self.loop.add_callback(self._detect_master)
         yield self.subscribe()
 
-    def start(self, **kwargs):
+    def start(self, block=False, **kwargs):
         """ Start scheduler running in separate thread """
         if hasattr(self, '_loop_thread'):
             return
@@ -54,6 +49,8 @@ class MesosConnection(object):
         pc = PeriodicCallback(lambda: None, 1000, io_loop=self.loop)
         self.loop.add_callback(pc.start)
         self.loop.add_callback(self._start)
+        if block:
+            self._loop_thread.join()
 
     @gen.coroutine
     def subscribe(self, retry_timeout=1):
@@ -74,7 +71,7 @@ class MesosConnection(object):
                     if self.connection_successful and "Mesos-Stream-Id" in h:
                         self.status = "connected"
                         self.mesos_stream_id = h["Mesos-Stream-Id"].strip()
-                except ValueError as ex:
+                except ValueError:
                     log.warn("Problem parsing headers")
 
             try:
@@ -147,7 +144,7 @@ class MesosConnection(object):
 
                 msg = decode(b''.join(msgs))
                 yield self._handle_events(msg)
-            except Exception as ex:
+            except Exception:
                 log.warn("Problem parsing response from endpoint")
 
     @gen.coroutine
