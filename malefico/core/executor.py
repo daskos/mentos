@@ -1,18 +1,30 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
-import uuid
+import os
 from os import environ as env
+import signal
+from threading import Thread
+import time
+import uuid
+
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
-from tornado.httpclient import  AsyncHTTPClient, HTTPRequest, HTTPError,HTTPClient
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPClient
+from tornado.httpclient import HTTPError
+from tornado.httpclient import HTTPRequest
+
 from malefico.core.connection import MesosConnection
-from malefico.core.utils import parse_duration,log_errors,encode_data,BacklogClient, encode_data ,decode_data
-import signal
-import time
-import os
-from threading import Thread
+from malefico.core.utils import BacklogClient
+from malefico.core.utils import decode_data
+from malefico.core.utils import encode_data
+from malefico.core.utils import log_errors
+from malefico.core.utils import parse_duration
+
 log = logging.getLogger(__name__)
 
 
@@ -44,7 +56,6 @@ class MesosExecutorDriver(MesosConnection):
 
         self.executor = executor
         self.outbound_connection = AsyncHTTPClient(self.loop)
-        #self.outbound_connection = HTTPClient()
         self._handlers = {
             "SUBSCRIBED": self.on_subscribed,
             "MESSAGE": self.on_message,
@@ -56,7 +67,6 @@ class MesosExecutorDriver(MesosConnection):
             "ERROR": self.on_error,
             "CLOSE": self.on_close
         }
-
 
     def gen_request(self, handler):
         payload = encode({
@@ -103,7 +113,7 @@ class MesosExecutorDriver(MesosConnection):
                 body=data,
                 method='POST',
                 headers=headers,
-            ),handle_response
+            ), handle_response
         )
 
     def update(self, status):
@@ -130,7 +140,6 @@ class MesosExecutorDriver(MesosConnection):
         logging.info('Executor sends status update {} for task {}'.format(
             status["state"], status["task_id"]))
 
-
     def message(self, message):
         """
         """
@@ -146,8 +155,6 @@ class MesosExecutorDriver(MesosConnection):
         logging.info('Driver sends framework message {}'.format(message))
 
 
-
-    # <editor-fold desc="Scheduler actions">
 
     def on_subscribed(self, info):
         executor_info = info['executor_info']
@@ -210,7 +217,6 @@ class MesosExecutorDriver(MesosConnection):
             self._delay_kill()
         self.executor.on_shutdown(self)
         self.stop()
-    # </editor-fold>
 
     @gen.coroutine
     def _handle_events(self, message):

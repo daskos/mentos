@@ -1,31 +1,29 @@
 from __future__ import print_function
 
 import sys
-import time
 from threading import Thread
-
-from malefico.core.interface import Executor
-from malefico.core.executor import MesosExecutorDriver
-from tornado.escape import json_encode as encode
-from malefico.core.utils import  decode_data
+import time
 import uuid
-import sys
 
+from tornado.escape import json_encode as encode
+
+from malefico.core.executor import MesosExecutorDriver
+from malefico.core.interface import Executor
+from malefico.core.utils import decode_data
 
 
 class MinimalExecutor(Executor):
+
     def on_launch(self, driver, task):
         def run_task(task):
             update = {
-                "task_id":{
-                    "value":task["task_id"]["value"]
+                "task_id": {
+                    "value": task["task_id"]["value"]
                 },
                 "state": 'TASK_RUNNING',
-                "timestamp" :  int(time.time())
+                "timestamp":  int(time.time())
             }
-            #driver.message(b"godd")
             driver.update(update)
-
 
             print(decode_data(task["data"]), file=sys.stderr)
             time.sleep(5)
@@ -48,7 +46,7 @@ class MinimalExecutor(Executor):
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
-    #debug
+    # debug
     time.sleep(10)
     driver = MesosExecutorDriver(MinimalExecutor())
     driver.start()

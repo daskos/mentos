@@ -1,15 +1,20 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-import logging
 from collections import deque
+import logging
 from threading import Thread
 from time import sleep
 
 from tornado import gen
 from tornado.escape import json_decode as decode
-from tornado.httpclient import AsyncHTTPClient, HTTPError
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPError
 from tornado.httputil import HTTPHeaders
-from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.ioloop import IOLoop
+from tornado.ioloop import PeriodicCallback
+
 from malefico.core.utils import log_errors
 
 AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
@@ -85,7 +90,6 @@ class MesosConnection(object):
                         "Got a 400 code from endpoint. Probably bad subscription request")
                     self.stop()
             except ConnectionRefusedError as ex:
-                # TODO make this exponential
                 log.warn("Problem connecting to the endpoint. Will retry")
                 yield self.reconnect(retry_timeout)
             except Exception as ex:
@@ -110,7 +114,7 @@ class MesosConnection(object):
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:
-                ## Ehm What ?
+                # Ehm What ?
                 if b"type" not in chunk:
                     log.warn(chunk)
                     return
@@ -153,7 +157,6 @@ class MesosConnection(object):
     def stop(self, timeout=10):
         """ stop
         """
-        # TODO Not thread-safe?
         if self.status == 'closed':
             return
         if self.detector:

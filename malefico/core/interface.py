@@ -1,4 +1,6 @@
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 
 class Scheduler(object):
@@ -104,7 +106,6 @@ class Scheduler(object):
             The unique identifier of the Mesos offer
         """
         pass
-
 
     def on_update(self, driver, status):
         """Event handler triggered when the status of a task has changed.

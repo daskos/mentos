@@ -1,4 +1,6 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
 import logging
 import socket
@@ -7,16 +9,25 @@ import six
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
-from zoonado import Zoonado
-from zoonado.exc import ConnectionLoss, NoNode
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPError
+from tornado.httpclient import HTTPRequest
+
 from malefico.core.connection import MesosConnection
-from malefico.core.utils import log_errors, get_master, master_info, get_http_master_url, encode_data
+from malefico.core.utils import encode_data
+from malefico.core.utils import get_http_master_url
+from malefico.core.utils import get_master
+from malefico.core.utils import log_errors
+from malefico.core.utils import master_info
+from zoonado import Zoonado
+from zoonado.exc import ConnectionLoss
+from zoonado.exc import NoNode
 
 log = logging.getLogger(__name__)
 
 
 class MesosSchedulerDriver(MesosConnection):
+
     def __init__(self, master, scheduler, name, user='', failover_timeout=100, capabilities=[],
                  implicit_acknowledgements=True, loop=None):
 
@@ -60,10 +71,11 @@ class MesosSchedulerDriver(MesosConnection):
     def framework_id(self, id):
         self.framework['framework_id'] = dict(value=id)
 
-    # <editor-fold desc="Scheduler actions">
+
 
     def _send(self, payload):
         data = encode(payload)
+
         def handle_response(response):
             if response.code not in (200, 202):
                 log.warn("Problem with request to master. %s" % response)
@@ -75,8 +87,14 @@ class MesosSchedulerDriver(MesosConnection):
             'Mesos-Stream-Id': self.mesos_stream_id
         }
 
-        self.outbound_connection.fetch(self.leading_master + "/api/v1/scheduler", handle_response, method='POST',
-                                       headers=headers, body=data)
+        self.outbound_connection.fetch(
+            HTTPRequest(
+                url=self.leading_master + "/api/v1/scheduler",
+                body=data,
+                method='POST',
+                headers=headers,
+            ), handle_response
+        )
 
     def request(self, requests):
         """
@@ -114,7 +132,7 @@ class MesosSchedulerDriver(MesosConnection):
     def reconcile(self, task_id, agent_id):
         """
         """
-        payload = {};
+        payload = {}
         if task_id and agent_id:
             payload = {
                 "framework_id": {
@@ -142,7 +160,7 @@ class MesosSchedulerDriver(MesosConnection):
                 "type": "RECONCILE",
                 "reconcile": {"tasks": []}
             }
-            log.warn("Reconciling all tasks ");
+            log.warn("Reconciling all tasks ")
         if payload:
             self._send(payload)
         else:
@@ -165,7 +183,7 @@ class MesosSchedulerDriver(MesosConnection):
             "type": "DECLINE",
             "decline": decline
         }
-
+        self._send(payload)
         log.warn('Declines offer {}'.format(offer_ids))
 
     def launch(self, offer_ids, tasks, filters={}):
@@ -214,6 +232,7 @@ class MesosSchedulerDriver(MesosConnection):
             },
             "type": "REVIVE"
         }
+        self._send(payload)
         log.warn(
             'Revives; removes all filters previously set by framework')
 
@@ -222,8 +241,8 @@ class MesosSchedulerDriver(MesosConnection):
         """
         if 'uuid' not in status:
             self.log.debug(
-                "Did not get a UUID for %s" % status);
-            return;
+                "Did not get a UUID for %s" % status)
+            return
 
         payload = {
             "framework_id": {
@@ -236,6 +255,7 @@ class MesosSchedulerDriver(MesosConnection):
                 "uuid": status["uuid"]
             }
         }
+        self._send(payload)
         log.warn('Acknowledges status update {}'.format(status))
 
     def message(self, executor_id, agent_id, message):
@@ -293,9 +313,6 @@ class MesosSchedulerDriver(MesosConnection):
         self._send(payload)
         log.warn("Sent teardown signal")
 
-    # </editor-fold>
-
-    # <editor-fold desc="Event handlers">
 
     def on_error(self, event):
         message = event['message']
@@ -356,7 +373,6 @@ class MesosSchedulerDriver(MesosConnection):
                 agent_id, failure['status']
             )
 
-    # </editor-fold>
 
     @gen.coroutine
     def _handle_events(self, message):
@@ -491,14 +507,11 @@ class MesosSchedulerDriver(MesosConnection):
                     log.warn(
                         "Problem resolving Master. Will retry.")
                     log.warn("Waiting for %d" % timeout)
-                    # TODO Backoff
                     yield gen.sleep(timeout)
                     yield self._detect_master(timeout)
             except Exception as ex:
                 log.error("Unhandeled exception")
                 log.exception(ex)
-
-
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (

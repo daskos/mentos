@@ -1,15 +1,23 @@
+from binascii import a2b_base64
+from binascii import b2a_base64
+from os.path import abspath
+from os.path import dirname
+from os.path import join
+import sys
+import time
+import uuid
+
+from tornado.escape import json_encode as encode
+
 from malefico.core.interface import Scheduler
 from malefico.core.scheduler import MesosSchedulerDriver
-from tornado.escape import json_encode as encode
-from malefico.core.utils import  encode_data
-import uuid
-import sys
+from malefico.core.utils import encode_data
 
 TASK_CPU = 0.2
 TASK_MEM = 128
 EXECUTOR_CPUS = 0.1
 EXECUTOR_MEM = 32
-from binascii import b2a_base64, a2b_base64
+
 
 def getResource(res, name):
     for r in res:
@@ -19,6 +27,7 @@ def getResource(res, name):
 
 
 class WEEE(Scheduler):
+
     def __init__(self, executor):
         self.executor = executor
         self.one = False
@@ -52,8 +61,10 @@ class WEEE(Scheduler):
                 "executor": executor,
                 "data": encode_data('Hello from task {}!'.format(task_id).encode()),
                 "resources": [
-                    dict(name='cpus', type='SCALAR', scalar={'value': TASK_CPU}),
-                    dict(name='mem', type='SCALAR', scalar={'value': TASK_MEM}),
+                    dict(name='cpus', type='SCALAR',
+                         scalar={'value': TASK_CPU}),
+                    dict(name='mem', type='SCALAR',
+                         scalar={'value': TASK_MEM}),
                 ]
             }
 
@@ -62,7 +73,6 @@ class WEEE(Scheduler):
 
 def on_rescinded(self, driver, offer_id):
     pass
-from os.path import abspath, join, dirname
 
 executor = {
     "executor_id": {
@@ -71,9 +81,9 @@ executor = {
     "name": "MinimalExecutor",
     "command": {
         "value": '%s %s' % (
-        sys.executable,
-        abspath(join(dirname(__file__)+"", 'executor.py'))
-    )
+            sys.executable,
+            abspath(join(dirname(__file__)+"", 'executor.py'))
+            )
     },
     "resources": [
         dict(name='mem', type='SCALAR', scalar={'value': EXECUTOR_MEM}),
@@ -85,7 +95,6 @@ executor = {
 sched = MesosSchedulerDriver('localhost', WEEE(executor), "Test", "arti")
 
 sched.start()
-import time
 
 time.sleep(100000)
 sched.stop()

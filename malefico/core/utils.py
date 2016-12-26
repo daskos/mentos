@@ -1,15 +1,21 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
 
-import logging
+from binascii import a2b_base64
+from binascii import b2a_base64
+import collections
 from contextlib import contextmanager
+import logging
 
 from tornado import gen
 from tornado.escape import json_decode as decode
+import tornado.httpclient
 from tornado.httpclient import HTTPClient
 
 logger = logging.getLogger(__name__)
 
-from binascii import b2a_base64, a2b_base64
+
 def encode_data(data):
     return b2a_base64(data).strip().decode('ascii')
 
@@ -17,17 +23,20 @@ def encode_data(data):
 def decode_data(data):
     return a2b_base64(data)
 
+
 @contextmanager
 def log_errors(pdb=False):
     try:
         yield
-    except ( gen.Return):
+    except (gen.Return):
         raise
     except Exception as e:
         logger.exception(e)
         if pdb:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
         raise
+
 
 def sync(loop, func, *args, **kwargs):
     """ Run coroutine in loop running in separate thread """
@@ -36,6 +45,7 @@ def sync(loop, func, *args, **kwargs):
             return loop.run_sync(lambda: func(*args, **kwargs))
         except RuntimeError:  # loop already running
             pass
+
 
 def get_master_version(master_url):
     # I hate life or this
@@ -54,8 +64,9 @@ def get_master(children):
     seq = min(children)
     return seq
 
+
 def master_info(uri):
-    master_info={"address":{}}
+    master_info = {"address": {}}
     hostport = uri.split(":")
     if len(hostport) == 2:
         master_info["address"]["hostname"] = hostport[0]
@@ -65,6 +76,7 @@ def master_info(uri):
         master_info["address"]["port"] = 5050
 
     return master_info
+
 
 def get_http_master_url(master):
     if "hostname" in master["address"]:
@@ -107,17 +119,16 @@ def parse_duration(s):
     n = float(s[:-len(postfix)])
     return n * unit
 
-import collections
-import tornado.httpclient
-
 
 class BacklogClient(object):
     MAX_CONCURRENT_REQUESTS = 20
 
     def __init__(self, ioloop):
         self.ioloop = ioloop
-        self.client = tornado.httpclient.AsyncHTTPClient(max_clients=self.MAX_CONCURRENT_REQUESTS)
-        self.client.configure(None, defaults=dict(connect_timeout=20, request_timeout=30))
+        self.client = tornado.httpclient.AsyncHTTPClient(
+            max_clients=self.MAX_CONCURRENT_REQUESTS)
+        self.client.configure(None, defaults=dict(
+            connect_timeout=20, request_timeout=30))
         self.backlog = collections.deque()
         self.concurrent_requests = 0
 
