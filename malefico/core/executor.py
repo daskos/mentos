@@ -43,7 +43,6 @@ class MesosExecutorDriver(MesosConnection):
         self.updates = {}
 
         self.executor = executor
-        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         self.outbound_connection = AsyncHTTPClient(self.loop)
         #self.outbound_connection = HTTPClient()
         self._handlers = {
@@ -72,8 +71,7 @@ class MesosExecutorDriver(MesosConnection):
         headers = {
             'content-type': 'application/json',
             'accept': 'application/json',
-            'connection': 'close',
-            'content-length': len(payload)
+            'connection': 'close'
         }
 
         subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/executor",
@@ -83,7 +81,7 @@ class MesosExecutorDriver(MesosConnection):
                                      streaming_callback=self._handlechunks,
                                      header_callback=handler,
                                      follow_redirects=False,
-                                     request_timeout=1e100)
+                                     request_timeout=1e15)
         return subscription_r
 
     def _send(self, payload):
@@ -97,8 +95,7 @@ class MesosExecutorDriver(MesosConnection):
         headers = {
             'content-type': 'application/json',
             'accept': 'application/json',
-            'connection': 'close',
-            'content-length': len(data)
+            'connection': 'close'
         }
         self.outbound_connection.fetch(
             HTTPRequest(

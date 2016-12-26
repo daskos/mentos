@@ -72,7 +72,6 @@ class MesosSchedulerDriver(MesosConnection):
             'content-type': 'application/json',
             'accept': 'application/json',
             'connection': 'close',
-            'content-length': len(data),
             'Mesos-Stream-Id': self.mesos_stream_id
         }
 
@@ -386,10 +385,9 @@ class MesosSchedulerDriver(MesosConnection):
         headers = {
             'content-type': 'application/json',
             'accept': 'application/json',
-            'connection': 'close',
-            'content-length': len(payload)
+            'connection': 'close'
         }
-
+        #'content-length': len(payload)
         subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/scheduler",
                                      method='POST',
                                      headers=headers,
@@ -397,7 +395,7 @@ class MesosSchedulerDriver(MesosConnection):
                                      streaming_callback=self._handlechunks,
                                      header_callback=handler,
                                      follow_redirects=False,
-                                     request_timeout=1e100)
+                                     request_timeout=1e15)
         return subscription_r
 
     @gen.coroutine

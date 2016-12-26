@@ -10,9 +10,9 @@ from tornado.escape import json_decode as decode
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
 from tornado.ioloop import IOLoop, PeriodicCallback
-
 from malefico.core.utils import log_errors
 
+AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
 log = logging.getLogger(__name__)
 
 

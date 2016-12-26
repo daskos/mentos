@@ -4,6 +4,9 @@ npm-debug.log
 *.toc
 /test
 test
+__pycache__
+/__pycache__
+__pycache__/
 ###################
 # compiled source #
 ###################
@@ -11,6 +14,7 @@ test
 *.class
 *.dll
 *.exe
+.vscode
 *.pyc
 *.pdb
 *.dll.config

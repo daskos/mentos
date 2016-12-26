@@ -28,7 +28,7 @@ class MinimalExecutor(Executor):
 
 
             print(decode_data(task["data"]), file=sys.stderr)
-            time.sleep(100)
+            time.sleep(5)
 
             update = {
                 "task_id": {
@@ -48,6 +48,7 @@ class MinimalExecutor(Executor):
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
+    #debug
     time.sleep(10)
     driver = MesosExecutorDriver(MinimalExecutor())
     driver.start()
