@@ -9,7 +9,13 @@ from tornado.httpclient import HTTPClient
 
 logger = logging.getLogger(__name__)
 
+from binascii import b2a_base64, a2b_base64
+def encode_data(data):
+    return b2a_base64(data).strip().decode('ascii')
 
+
+def decode_data(data):
+    return a2b_base64(data)
 
 @contextmanager
 def log_errors(pdb=False):
@@ -100,3 +106,37 @@ def parse_duration(s):
 
     n = float(s[:-len(postfix)])
     return n * unit
+
+import collections
+import tornado.httpclient
+
+
+class BacklogClient(object):
+    MAX_CONCURRENT_REQUESTS = 20
+
+    def __init__(self, ioloop):
+        self.ioloop = ioloop
+        self.client = tornado.httpclient.AsyncHTTPClient(max_clients=self.MAX_CONCURRENT_REQUESTS)
+        self.client.configure(None, defaults=dict(connect_timeout=20, request_timeout=30))
+        self.backlog = collections.deque()
+        self.concurrent_requests = 0
+
+    def __get_callback(self, function):
+        def wrapped(*args, **kwargs):
+            self.concurrent_requests -= 1
+            self.try_run_request()
+            return function(*args, **kwargs)
+
+        return wrapped
+
+    def try_run_request(self):
+        while self.backlog and self.concurrent_requests < self.MAX_CONCURRENT_REQUESTS:
+            request, callback = self.backlog.popleft()
+            self.client.fetch(request, callback=callback)
+            self.concurrent_requests += 1
+
+    def fetch(self, request, callback=None):
+        wrapped = self.__get_callback(callback)
+
+        self.backlog.append((request, wrapped))
+        self.try_run_request()

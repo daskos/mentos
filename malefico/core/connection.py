@@ -11,12 +11,13 @@ from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from malefico.core.utils import log_errors
+from malefico.core.utils import log_errors,BacklogClient
 
 log = logging.getLogger(__name__)
 
 
 class MesosConnection(object):
+
     def __init__(self, leading_master=None, loop=None):
 
         self.loop = loop or IOLoop()
@@ -26,9 +27,10 @@ class MesosConnection(object):
         self.detector = None
         self.buffer = deque()
 
-        self.leading_master = None
-        self.leading_master_seq = None
-        self.leading_master_master_info = None
+        self.client = BacklogClient(loop)
+
+        self._handlers = {}
+        self.leading_master = leading_master
 
     @gen.coroutine
     def _start(self, **kwargs):
@@ -58,7 +60,7 @@ class MesosConnection(object):
             while not self.leading_master:
                 yield gen.sleep(0.01)
 
-            client = AsyncHTTPClient()
+            #client = AsyncHTTPClient()
             h = HTTPHeaders()
 
             def header_callback(response):
@@ -69,20 +71,21 @@ class MesosConnection(object):
                         h.parse_line(response)
                     if self.connection_successful and "Mesos-Stream-Id" in h:
                         self.status = "connected"
-                        self.mesos_stream_id = h["Mesos-Stream-Id"]
+                        self.mesos_stream_id = h["Mesos-Stream-Id"].strip()
                 except ValueError as ex:
                     log.warn("Problem parsing headers")
 
             try:
                 subscription_r = self.gen_request(header_callback)
-                yield client.fetch(subscription_r)
+                self.client.fetch(subscription_r)
                 self.status = 'connecting'
             except HTTPError as ex:
                 if ex.code == 599:
                     log.warn("Disconnected from endpoint, will try to reconnect")
                     yield self.reconnect(retry_timeout)
                 if ex.code == 400:
-                    log.warn("Got a 400 code from endpoint. Probably bad subscription request")
+                    log.warn(
+                        "Got a 400 code from endpoint. Probably bad subscription request")
                     self.stop()
             except ConnectionRefusedError as ex:
                 # TODO make this exponential
@@ -106,22 +109,14 @@ class MesosConnection(object):
         yield self.subscribe()
 
     @gen.coroutine
-    def _handle_events(self, message):
-        with log_errors():
-            try:
-                if message["type"] in self._handlers:
-                    self._handlers[message["type"]](message)
-                else:
-                    log.warn("Unhandled event %s" % message)
-            except Exception as ex:
-                log.warn("Problem dispatching event %s" % message)
-                log.exception(ex)
-
-    @gen.coroutine
     def _handlechunks(self, chunk):
-        """ Handle incoming  """
+        """ Handle incoming byte chunk stream """
         with log_errors():
             try:
+                ## Ehm What ?
+                if b"type" not in chunk:
+                    log.warn(chunk)
+                    return
                 self.buffer.append(chunk)
                 length = self.buffer[0].split(b'\n', 1)[0]
                 number = -len(length)
@@ -145,14 +140,14 @@ class MesosConnection(object):
                 if number > length:
                     msg = msgs[-1]
                     length, message = msg[
-                                      (length - number):], msg[:(length - number)]
+                        (length - number):], msg[:(length - number)]
                     msgs[-1] = message
                     self.buffer.appendleft(length)
 
                 msg = decode(b''.join(msgs))
                 yield self._handle_events(msg)
             except Exception as ex:
-                log.warn("Problem parsing response from scheduler")
+                log.warn("Problem parsing response from endpoint")
 
     @gen.coroutine
     def _detect_master(self, timeout=1):
@@ -161,10 +156,10 @@ class MesosConnection(object):
     def stop(self, timeout=10):
         """ stop
         """
-        # XXX Not thread-safe?
+        # TODO Not thread-safe?
         if self.status == 'closed':
             return
-
+        self.tear
         if self.detector:
             log.warn("Terminiating detector")
             self.loop.add_callback(self.detector.close)

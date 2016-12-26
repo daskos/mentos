@@ -88,6 +88,24 @@ class Scheduler(object):
         """
         pass
 
+    def on_rescind_inverse(driver, offer_id):
+        """Event handler triggered when an offer is no longer valid.
+        (e.g., the slave was lost or another framework used resources in the
+        offer)
+        If for whatever reason an offer is never rescinded (e.g., dropped
+        message, failing over framework, etc.), a framework that attempts to
+        launch tasks using an invalid offer will receive TASK_LOST status
+        updates for those tasks (see Scheduler.on_offers).
+        Parameters
+        ----------
+        driver: SchedulerDriver
+            Interface for interacting with Mesos Master
+        offer_id: string
+            The unique identifier of the Mesos offer
+        """
+        pass
+
+
     def on_update(self, driver, status):
         """Event handler triggered when the status of a task has changed.
         (e.g., a slave is lost and so the task is lost, a task finishes and an
