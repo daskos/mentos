@@ -58,7 +58,7 @@ class Framework(Scheduler):
         self.tasks[task.id] = task
 
     def on_offers(self, driver, offers):
-        offers = [Offer(**f) for f in offers]
+        #offers = [Offer(**f) for f in offers]
         log.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
@@ -89,7 +89,7 @@ class Framework(Scheduler):
                 log.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
-        status = TaskStatus(**status)
+        #status = TaskStatus(**status)
         task = self.tasks[status.task_id]
         log.info('Updated task {} state to {}'.format(status.task_id,
                                                           status.state))

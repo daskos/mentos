@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 class MesosSchedulerDriver(Subscriber):
 
     def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost", failover_timeout=100, capabilities=[],
-                 implicit_acknowledgements=True, use_message=True, loop=None):
+                 implicit_acknowledgements=True, use_messages=True, loop=None):
 
         super(MesosSchedulerDriver, self).__init__(loop=loop)
         self.master = master
@@ -32,7 +32,7 @@ class MesosSchedulerDriver(Subscriber):
         self.leading_master_seq = None
         self.leading_master_info = None
 
-        self.use_messages = use_message
+        self.use_messages = use_messages
 
         self.scheduler = scheduler
         self.framework = {

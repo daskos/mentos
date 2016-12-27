@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 
 class MesosExecutorDriver(Subscriber):
 
-    def __init__(self, executor, use_message=True, loop=None):
+    def __init__(self, executor, use_messages=True, loop=None):
         """
 
         Args:
@@ -44,7 +44,7 @@ class MesosExecutorDriver(Subscriber):
 
         self.checkpoint = bool(env.get('MESOS_CHECKPOINT'))
         self.local = bool(env.get('MESOS_LOCAL'))
-        self.use_messages = use_message
+        self.use_messages = use_messages
         self.executor = executor
         self.framework_info = None
         self.executor_info = None
@@ -187,14 +187,15 @@ class MesosExecutorDriver(Subscriber):
 
     def on_launch_group(self, event):
         task_info = TaskInfo(**event['task']) if self.use_messages else event['task']
-        task_id = task_info['task_id']['value']
+        task_id = task_info.task_id if self.use_messages else task_info['task_id']['value']
         assert task_id not in self.tasks
         self.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
 
     def on_launch(self, event):
+        #TODO God I hate life magic is going on here
         task_info = TaskInfo(**event['task']) if self.use_messages else event['task']
-        task_id = task_info['task_id']['value']
+        task_id = task_info.task_id if self.use_messages else task_info['task_id']['value']
         assert task_id not in self.tasks
         self.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
