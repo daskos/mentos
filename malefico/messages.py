@@ -5,26 +5,30 @@ import logging
 import cloudpickle
 
 from malefico.core.messages import (CommandInfo, ContainerInfo, Cpus, Disk,
-                                    Environment, ExecutorInfo, Mem,
+                                    Environment, ExecutorInfo, Mem,DockerInfo,
                                     TaskInfo, TaskStatus, Image)
 from malefico.utils import remote_exception
+
+from malefico.utils import encode_data,decode_data
+
+log = logging.getLogger(__name__)
 
 
 class PickleMixin(object):
 
     @property
     def data(self):
-        return cloudpickle.loads(self['data'])
+        return cloudpickle.loads(decode_data(self['data']))
 
     @data.setter
     def data(self, value):
-        self['data'] = cloudpickle.dumps(value)
+        self['data'] = encode_data(cloudpickle.dumps(value))
 
 
 class PythonTaskStatus(PickleMixin, TaskStatus):
     def __init__(self, data=None, **kwargs):
         super(PythonTaskStatus, self).__init__(**kwargs)
-        self.labels = [{"key": "python"}]
+        self.labels = {"labels":[{"key": "python"}]}
         self.data = data
 
     @property
@@ -43,15 +47,16 @@ class PythonTask(PickleMixin, TaskInfo):
 
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
-                 executor=None, retries=3, **kwds):
+                 executor=None, retries=3,name="python-task", **kwds):
         super(PythonTask, self).__init__(**kwds)
         self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
         self.executor = executor or PythonExecutor()
         self.data = (fn, args, kwargs)
         self.resources = resources
+        self.name = name
         self.retries = retries
         self.attempt = 1
-        self.labels = [{"key": "python"}]
+        self.labels = {"labels":[{"key": "python"}]}
 
     def __call__(self):
         fn, args, kwargs = self.data
@@ -59,13 +64,13 @@ class PythonTask(PickleMixin, TaskInfo):
 
     def retry(self, status):
         if self.attempt < self.retries:
-            logging.info('Task {} attempt #{} rescheduled due to failure with state '
+            log.info('Task {} attempt #{} rescheduled due to failure with state '
                          '{} and message {}'.format(self.id, self.attempt,
                                                     status.state, status.message))
             self.attempt += 1
             status.state = 'TASK_STAGING'
         else:
-            logging.error('Aborting due to task {} failed for {} attempts in state '
+            log.error('Aborting due to task {} failed for {} attempts in state '
                           '{} with message {}'.format(self.id, self.retries,
                                                       status.state, status.message))
             raise RuntimeError('Task {} failed with state {} and message {}'.format(
@@ -81,14 +86,14 @@ class PythonTask(PickleMixin, TaskInfo):
 
     def on_update(self, status):
         self.status = status  # update task's status
-        logging.info('Task {} has been updated with state {}'.format(
+        log.info('Task {} has been updated with state {}'.format(
             self.id.value, status.state))
 
     def on_success(self, status):
-        logging.info('Task {} has been succeded'.format(self.id.value))
+        log.info('Task {} has been succeded'.format(self.id.value))
 
     def on_fail(self, status):
-        logging.error('Task {} has been failed with state {} due to {}'.format(
+        log.error('Task {} has been failed with state {} due to {}'.format(
             self.id.value, status.state, status.message))
 
         try:
@@ -97,44 +102,64 @@ class PythonTask(PickleMixin, TaskInfo):
             # not a code error, e.g. problem during deployment
             self.retry(status)
         else:
-            logging.error('Aborting due to task {} failed with state {} and message '
+            log.error('Aborting due to task {} failed with state {} and message '
                           '{}'.format(self.id, status.state, status.message))
 
 
 class PythonExecutor(ExecutorInfo):
 
-    def __init__(self, docker='satyr', force_pull=False,
+    def __init__(self, docker='malefico', force_pull=False,
                  envs={}, uris=[], **kwds):
         super(PythonExecutor, self).__init__(**kwds)
-        self.container = ContainerInfo(
-            type='MESOS',
-            mesos=ContainerInfo.MesosInfo(
-                image=Image(type='DOCKER',
-                            docker=Image.Docker())))
-        self.command = CommandInfo(value='python -m satyr.executor',
+        # self.container = ContainerInfo(
+        #     type='MESOS',
+        #     mesos=ContainerInfo.MesosInfo(
+        #         image=Image(type='DOCKER',
+        #                     docker=Image.Docker())))
+        self.container = ContainerInfo(type='DOCKER',
+                                    docker=DockerInfo(network='HOST'))
+        self.command = CommandInfo(value='python -m malefico.executor',
                                    shell=True)
-        self.force_pull = force_pull
         self.docker = docker
+        self.force_pull = force_pull
+
         self.envs = envs
         self.uris = uris
-        self.labels = [{"key": "python"}]
+        self.labels = {"labels":[{"key": "python"}]}
+
+    # @property
+    # def docker(self):
+    #     return self.container.mesos.image.docker.name
+    #
+    # @docker.setter
+    # def docker(self, value):
+    #     self.container.mesos.image.docker.name = value
 
     @property
     def docker(self):
-        return self.container.mesos.image.docker.name
+        return self.container.docker.image
 
     @docker.setter
     def docker(self, value):
-        self.container.mesos.image.docker.name = value
+        self.container.docker.image = value
+
+
+    # @property
+    # def force_pull(self):
+    #     # cached is the opposite of force pull image
+    #     return not self.container.mesos.image.cached
+    #
+    # @force_pull.setter
+    # def force_pull(self, value):
+    #     self.container.docker.image.cached = not value
 
     @property
     def force_pull(self):
-        # cached is the opposite of force pull image
-        return not self.container.mesos.image.cached
+        return self.container.docker.force_pull_image
 
     @force_pull.setter
     def force_pull(self, value):
-        self.container.mesos.image.cached = not value
+        self.container.docker.force_pull_image = value
 
     @property
     def uris(self):

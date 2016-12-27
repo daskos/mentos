@@ -3,10 +3,10 @@ from __future__ import absolute_import, division, print_function
 import operator
 from functools import partial
 from uuid import uuid4
+import six
 
 
 class Message(dict):
-
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -18,7 +18,7 @@ class Message(dict):
             return v
         elif isinstance(v, dict):
             return Message(**v)
-        elif isinstance(v, (str,bytes)):
+        elif isinstance(v, (str, bytes)):
             return v
         elif hasattr(v, '__iter__'):
             return [cls.cast(item) for item in v]
@@ -39,7 +39,7 @@ class Message(dict):
             self[k] = v
 
     def __getattr__(self, k):
-        if k!="__call__":
+        if k != "__call__":
             return self[k]
 
     def __dir__(self):
@@ -58,25 +58,34 @@ class Message(dict):
 
 
 class Variable(Message):
-    def __init__(self,name,value):
+    def __init__(self, name, value):
         self.name = name
         self.value = value
 
+
 class Environment(Message):
-    pass
+    def __init__(self, **kwargs):
+
+        # self.variables = []
+        # if not isinstance(variables, dict):
+        #     raise TypeError("Expecting a dict of variables")
+        # for name, value in six.iteritems(variables):
+        #     self.variables.append(Variable(name, value))
+        super(Message, self).__init__(**kwargs)
+
 
 class Scalar(Message):
-    pass
+    def __init__(self, **kwargs):
+        super(Message, self).__init__(**kwargs)
 
-pass
 
 class Resource(Message):
-    pass
+    def __init__(self, **kwargs):
+        super(Message, self).__init__(**kwargs)
 
 
 # TODO: RangeResource e.g. ports
 class ScalarResource(Resource):
-
     def __init__(self, value=None, **kwargs):
         super(Resource, self).__init__(**kwargs)
         if value is not None:
@@ -105,7 +114,6 @@ class ScalarResource(Resource):
     def __lt__(self, second):
         first, second = float(self), float(second)
         return first < second
- 
 
     def __repr__(self):
         return "<{}: {}>".format(self.__class__.__name__, self.scalar.value)
@@ -153,7 +161,8 @@ class ScalarResource(Resource):
 
 class Cpus(ScalarResource):
     def __init__(self, value):
-            super(Cpus, self).__init__(value=value,name="cpus",type="SCALAR")
+        super(Cpus, self).__init__(value=value, name="cpus", type="SCALAR")
+
 
 class Mem(ScalarResource):
     def __init__(self, value):
@@ -164,8 +173,8 @@ class Disk(ScalarResource):
     def __init__(self, value):
         super(Disk, self).__init__(value=value, name="disk", type="SCALAR")
 
-class ResourcesMixin(object):
 
+class ResourcesMixin(object):
     @classmethod
     def _cast_zero(cls, second=0):
         if second == 0:
@@ -176,22 +185,22 @@ class ResourcesMixin(object):
     @property
     def cpus(self):
         for res in self.resources:
-            if isinstance(res, Cpus):
-                return res
+            if res.name == "cpus":
+                return Cpus(res.scalar.value)
         return Cpus(0.0)
 
     @property
     def mem(self):
         for res in self.resources:
-            if isinstance(res, Mem):
-                return res
+            if res.name == "mem":
+                return Mem(res.scalar.value)
         return Mem(0.0)
 
     @property
     def disk(self):
         for res in self.resources:
-            if isinstance(res, Disk):
-                return res
+            if res.name == "disk":
+                return Disk(res.scalar.value)
         return Disk(0.0)
 
     # @property
@@ -207,8 +216,8 @@ class ResourcesMixin(object):
     def __eq__(self, second):
         second = self._cast_zero(second)
         return all([self.cpus == second.cpus,
-             self.mem == second.mem,
-             self.disk == second.disk])
+                    self.mem == second.mem,
+                    self.disk == second.disk])
 
     def __ne__(self, second):
         second = self._cast_zero(second)
@@ -219,8 +228,8 @@ class ResourcesMixin(object):
     def __gt__(self, second):
         second = self._cast_zero(second)
         return any([self.cpus > second.cpus,
-                  self.mem > second.mem,
-                  self.disk > second.disk])
+                    self.mem > second.mem,
+                    self.disk > second.disk])
 
     def __ge__(self, second):
         second = self._cast_zero(second)
@@ -237,8 +246,8 @@ class ResourcesMixin(object):
     def __lt__(self, second):
         second = self._cast_zero(second)
         return all([self.cpus < second.cpus,
-             self.mem < second.mem,
-             self.disk < second.disk])
+                    self.mem < second.mem,
+                    self.disk < second.disk])
 
     def __radd__(self, second):  # to support sum()
         second = self._cast_zero(second)
@@ -278,26 +287,48 @@ class ResourcesMixin(object):
 
 
 class FrameworkID(Message):
-    pass
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(FrameworkID, self).__init__(**kwargs)
 
 
 class SlaveID(Message):
-    pass
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(SlaveID, self).__init__(**kwargs)
+
 
 class ExecutorID(Message):
-   pass
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(ExecutorID, self).__init__(**kwargs)
+
 
 class AgentID(Message):
-   pass
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(AgentID, self).__init__(**kwargs)
 
-class AgentInfo(Message):
-   pass
 
 class OfferID(Message):
-    pass
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(OfferID, self).__init__(**kwargs)
 
 
 class TaskID(Message):
+    def __init__(self, **kwargs):
+        if "value" not in kwargs:
+            raise AttributeError
+        super(TaskID, self).__init__(**kwargs)
+
+
+class AgentInfo(Message):
     pass
 
 
@@ -306,7 +337,6 @@ class FrameworkInfo(Message):
 
 
 class ExecutorInfo(Message):
-
     def __init__(self, id=None, **kwargs):
         super(ExecutorInfo, self).__init__(**kwargs)
         self.id = id or str(uuid4())
@@ -335,7 +365,7 @@ class Filters(Message):
 
 
 class TaskStatus(Message):
-    def __init__(self,**kwargs):
+    def __init__(self, **kwargs):
         super(TaskStatus, self).__init__(**kwargs)
 
     @property
@@ -345,7 +375,7 @@ class TaskStatus(Message):
     @task_id.setter
     def task_id(self, value):
         if not isinstance(value, TaskID):
-            value = TaskID(value=value)
+            value = TaskID(value=value) if not isinstance(value, dict) else  TaskID(**value)
         self['task_id'] = value
 
     def is_staging(self):
@@ -375,10 +405,51 @@ class TaskStatus(Message):
 
 
 class Offer(ResourcesMixin, Message):  # important order!
-    pass
+    def __init__(self, **kwargs):
+        super(Offer, self).__init__(**kwargs)
+
+    @property
+    def framework_id(self):
+        return self['framework_id']
+
+    @framework_id.setter
+    def framework_id(self, value):
+        if not isinstance(value, (FrameworkID)):
+            value = FrameworkID(value=value) if not isinstance(value, dict) else  FrameworkID(**value)
+        self['framework_id'] = value
+
+    @property
+    def agent_id(self):
+        return self['agent_id']
+
+    @agent_id.setter
+    def agent_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value) if not isinstance(value, dict) else  AgentID(**value)
+        self['agent_id'] = value
+
+    @property
+    def id(self):
+        return self['id']
+
+    @id.setter
+    def id(self, value):
+        if not isinstance(value, (OfferID)):
+            value = OfferID(value=value) if not isinstance(value, dict) else  OfferID(**value)
+        self['id'] = value
+
+    @property
+    def slave_id(self):
+        return self['agent_id']
+
+    @slave_id.setter
+    def slave_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value) if not isinstance(value, dict) else  AgentID(**value)
+        self['agent_id'] = value
+
 
 class TaskInfo(ResourcesMixin, Message):
-
     def __init__(self, id=None, **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
         self.id = id or str(uuid4())
@@ -393,6 +464,16 @@ class TaskInfo(ResourcesMixin, Message):
         if not isinstance(value, TaskID):
             value = TaskID(value=value)
         self['task_id'] = value
+
+    @property
+    def slave_id(self):
+        return self['agent_id']
+
+    @slave_id.setter
+    def slave_id(self, value):
+        if not isinstance(value, (AgentID, SlaveID)):
+            value = AgentID(value=value)
+        self['agent_id'] = value
 
 
 class CommandInfo(Message):
@@ -426,3 +507,5 @@ class Request(Message):
 class Operation(Message):
     pass
 
+class DockerInfo(Message):
+    pass

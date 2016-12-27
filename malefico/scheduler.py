@@ -10,11 +10,11 @@ from functools import partial
 from malefico.constraint import pour
 from malefico.core.interface import Scheduler
 from malefico.placement import bfd
-from malefico.core.messages import FrameworkInfo, TaskInfo,OfferID,Offer
+from malefico.core.messages import FrameworkInfo, TaskInfo,OfferID,Offer,SlaveID,TaskStatus
 from malefico.core.scheduler import MesosSchedulerDriver
 from malefico.utils import Interruptable, timeout
 
-
+log = logging.getLogger(__name__)
 
 # TODO reuse the same type of executors
 class Framework(Scheduler):
@@ -43,7 +43,7 @@ class Framework(Scheduler):
         counts = Counter(states)
         message = ', '.join(['{}: {}'.format(key, count)
                              for key, count in counts.items()])
-        logging.info('Task states: {}'.format(message))
+        log.info('Task states: {}'.format(message))
 
     def wait(self, seconds=-1):
         with timeout(seconds):
@@ -59,10 +59,8 @@ class Framework(Scheduler):
 
     def on_offers(self, driver, offers):
         offers = [Offer(**f) for f in offers]
-        logging.info('Received offers: {}'.format(sum(offers)))
+        log.info('Received offers: {}'.format(sum(offers)))
         self.report()
-
-
 
         # query tasks ready for scheduling
         staging = [self.tasks[status.task_id]
@@ -85,14 +83,15 @@ class Framework(Scheduler):
                     task.slave_id = offer.slave_id
                     task.status.state = 'TASK_STARTING'
                 # running with empty task list will decline the offer
-                logging.info('launches {}'.format(tasks))
+                    log.info('launches {}'.format(tasks))
                 driver.launch(offer.id, tasks)
             except Exception:
-                logging.exception('Exception occured during task launch!')
+                log.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
+        status = TaskStatus(**status)
         task = self.tasks[status.task_id]
-        logging.info('Updated task {} state to {}'.format(status.task_id,
+        log.info('Updated task {} state to {}'.format(status.task_id,
                                                           status.state))
         try:
             task.update(status)  # creates new task.status in case of retry

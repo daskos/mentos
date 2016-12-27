@@ -15,13 +15,13 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from malefico.core.subscriber import Subscriber
 from malefico.utils import (
     decode_data, encode_data, log_errors, parse_duration)
-
+from malefico.core.messages import  TaskInfo,TaskID
 log = logging.getLogger(__name__)
 
 
 class MesosExecutorDriver(Subscriber):
 
-    def __init__(self, executor, loop=None):
+    def __init__(self, executor, use_message=True, loop=None):
         """
 
         Args:
@@ -44,7 +44,7 @@ class MesosExecutorDriver(Subscriber):
 
         self.checkpoint = bool(env.get('MESOS_CHECKPOINT'))
         self.local = bool(env.get('MESOS_LOCAL'))
-
+        self.use_messages = use_message
         self.executor = executor
         self.framework_info = None
         self.executor_info = None
@@ -96,10 +96,10 @@ class MesosExecutorDriver(Subscriber):
         if response.code not in (200, 202):
             log.error("Problem with request to  Executor for payload %s" %
                       response.request.body)
-            log.error(response)
+            log.error(response.body)
             self.executor.on_outbound_error(self, response)
         else:
-            self.executor.on_outbound_sucess(self, response)
+            self.executor.on_outbound_success(self, response)
             log.warn("Succeed request to master %s" %
                      response.request.body)
 
@@ -186,21 +186,21 @@ class MesosExecutorDriver(Subscriber):
             self.abort()
 
     def on_launch_group(self, event):
-        task_info = event['task']
+        task_info = TaskInfo(**event['task']) if self.use_messages else event['task']
         task_id = task_info['task_id']['value']
         assert task_id not in self.tasks
         self.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
 
     def on_launch(self, event):
-        task_info = event['task']
+        task_info = TaskInfo(**event['task']) if self.use_messages else event['task']
         task_id = task_info['task_id']['value']
         assert task_id not in self.tasks
         self.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
 
     def on_kill(self, event):
-        task_id = event['task_id']
+        task_id = TaskID(**event['task_id']) if self.use_messages else event['task_id']
         self.executor.on_kill(self, task_id)
 
     def on_acknowledged(self, event):

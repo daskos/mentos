@@ -10,26 +10,29 @@ from tornado.escape import json_encode as encode
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from zoonado import Zoonado
 from zoonado.exc import ConnectionLoss, NoNode
-
+import os
+import getpass
 from malefico.core.subscriber import Subscriber
 from malefico.utils import (
     encode_data, get_http_master_url, get_master, log_errors, master_info)
 
-
+from malefico.core.messages import FrameworkID,FrameworkInfo,TaskStatus,TaskInfo,ExecutorID,ExecutorInfo,TaskID, Offer,OfferID,AgentID
 
 log = logging.getLogger(__name__)
 
 
 class MesosSchedulerDriver(Subscriber):
 
-    def __init__(self, master, scheduler, name, user='', failover_timeout=100, capabilities=[],
-                 implicit_acknowledgements=True, loop=None):
+    def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost", failover_timeout=100, capabilities=[],
+                 implicit_acknowledgements=True, use_message=True, loop=None):
 
         super(MesosSchedulerDriver, self).__init__(loop=loop)
         self.master = master
 
         self.leading_master_seq = None
         self.leading_master_info = None
+
+        self.use_messages = use_message
 
         self.scheduler = scheduler
         self.framework = {
@@ -69,7 +72,7 @@ class MesosSchedulerDriver(Subscriber):
         if response.code not in (200, 202):
             log.error("Problem with request to  Master for payload %s" %
                       response.request.body)
-            log.error(response)
+            log.error(response.body)
             self.scheduler.on_outbound_error(self,response)
         else:
             self.scheduler.on_outbound_success(self, response)
@@ -238,7 +241,7 @@ class MesosSchedulerDriver(Subscriber):
         """
         """
         if 'uuid' not in status:
-            self.log.debug(
+            log.debug(
                 "Did not get a UUID for %s" % status)
             return
 
@@ -324,7 +327,7 @@ class MesosSchedulerDriver(Subscriber):
 
         if self.framework_id:
             self.scheduler.on_reregistered(
-                self, self.framework_id, self.leading_master)
+                self, self.framework_id , self.leading_master)
         else:
             self.framework_id = info['framework_id']["value"]
             self.scheduler.on_registered(
@@ -333,41 +336,44 @@ class MesosSchedulerDriver(Subscriber):
             )
 
     def on_offers(self, event):
-        offers = event['offers']
+        offers = [Offer(**offer) for offer in event['offers']] if self.use_messages else event['offers']
         self.scheduler.on_offers(
             self, offers
         )
 
     def on_rescind_inverse(self, event):
-        offer_id = event['offer_id']
+        offer_id = OfferID(**event['offer_id']) if self.use_messages else event['offer_id']
         self.scheduler.on_rescind_inverse(self, offer_id)
 
     def on_rescind(self, event):
-        offer_id = event['offer_id']
+        offer_id = OfferID(**event['offer_id']) if self.use_messages else event['offer_id']
         self.scheduler.on_rescinded(self, offer_id)
 
     def on_update(self, event):
-        status = event['status']
+        status = TaskStatus(**event['status']) if self.use_messages else event['status']
         self.scheduler.on_update(self, status)
         if self.implicit_acknowledgements:
             self.acknowledge(status)
 
-    def on_message(self, message):
-        executor_id = message['executor_id']
-        agent_id = message['agent_id']
-        data = message['data']
+    def on_message(self, event):
+        executor_id = ExecutorID(**event['executor_id']) if self.use_messages else event['executor_id']
+        agent_id = AgentID(**event['agent_id']) if self.use_messages else event['agent_id']
+        data = event['data']
         self.scheduler.on_message(
             self, executor_id, agent_id, data
         )
 
-    def on_failure(self, failure):
-        agent_id = failure['agent_id']
-        if 'executor_id' not in failure:
+    def on_failure(self, event):
+        agent_id = AgentID(**event['agent_id']) if self.use_messages else event['agent_id']
+        if 'executor_id' not in event:
             self.scheduler.on_agent_lost(self, agent_id)
         else:
+            executor_id = ExecutorID(**event['executor_id']) if self.use_messages else event['executor_id']
+            #TaskStatus(**event['status']) if self.use_messages else
+            status = event['status']
             self.scheduler.on_executor_lost(
-                self, failure['executor_id'],
-                agent_id, failure['status']
+                self, executor_id,
+                agent_id, status
             )
 
     @gen.coroutine

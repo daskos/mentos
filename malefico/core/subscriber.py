@@ -170,7 +170,7 @@ class Subscriber(object):
 
     def __enter__(self):
         if not self.loop._running:
-            self.start(block=True)
+            self.start(block=False)
         return self
 
     def __exit__(self, type, value, traceback):

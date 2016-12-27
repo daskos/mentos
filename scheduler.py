@@ -91,7 +91,7 @@ executor = {
 
 }
 
-sched = MesosSchedulerDriver('localhost', WEEE(executor), "Test", "arti")
+sched = MesosSchedulerDriver(WEEE(executor), "Test", "arti")
 
 sched.start(block=True)
 

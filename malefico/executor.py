@@ -7,12 +7,10 @@ import threading
 import traceback
 from functools import partial
 
-from malefico.core.executor import MesosExecutorDriver
-from malefico.core.interface import Executor
-
-from .core.interface import Executor
-from .messages import PythonTaskStatus
-from .utils import Interruptable
+from  malefico.core.executor import MesosExecutorDriver
+from  malefico.core.interface import Executor
+from  malefico.messages import TaskStatus,PythonTaskStatus
+from  malefico.utils import Interruptable
 
 
 class ThreadExecutor(Executor):
@@ -36,7 +34,7 @@ class ThreadExecutor(Executor):
             logging.exception('Task errored with {}'.format(e))
             driver.update(status(state='TASK_FAILED',
                                  data=(e, tb),
-                                 message=e.message))
+                                 message=e))
             logging.info('Sent TASK_RUNNING status update')
         else:
             driver.update(status(state='TASK_FINISHED', data=result))
@@ -49,6 +47,7 @@ class ThreadExecutor(Executor):
                 driver.stop()
 
     def on_launch(self, driver, task):
+        print(task)
         thread = threading.Thread(target=self.run, args=(driver, task))
         self.tasks[task.id] = thread  # track tasks runned by this executor
         thread.start()
@@ -77,5 +76,6 @@ class ProcessExecutor(ThreadExecutor):
 
 
 if __name__ == '__main__':
+    import time
     driver = MesosExecutorDriver(ThreadExecutor())
     driver.start(block=True)
