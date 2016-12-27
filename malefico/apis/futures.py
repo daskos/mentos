@@ -6,7 +6,7 @@ import time
 from concurrent.futures import ALL_COMPLETED, CancelledError, TimeoutError
 
 from ..messages import Cpus, Disk, Mem, PythonExecutor, PythonTask
-from ..scheduler import QueueScheduler
+from ..scheduler import Framework
 from ..core.scheduler import MesosSchedulerDriver
 from ..utils import timeout as seconds
 
@@ -75,7 +75,7 @@ class MesosPoolExecutor(MesosSchedulerDriver):
 
     def __init__(self, max_workers=-1, *args, **kwargs):
         self.max_worker = max_workers  # TODO
-        self.scheduler = QueueScheduler()
+        self.scheduler = Framework()
         super(MesosPoolExecutor, self).__init__(
             self.scheduler, *args, **kwargs)
 

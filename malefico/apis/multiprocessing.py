@@ -4,7 +4,7 @@ import time
 
 from ..messages import Cpus, Disk, Mem, PythonExecutor, PythonTask
 from ..queue import Queue
-from ..scheduler import QueueScheduler
+from ..scheduler import Framework
 from ..core.scheduler import  MesosSchedulerDriver
 from ..utils import timeout
 
@@ -48,7 +48,7 @@ class Pool(MesosSchedulerDriver):
 
     def __init__(self, processes=-1, *args, **kwargs):
         self.processes = processes
-        self.scheduler = QueueScheduler()
+        self.scheduler = Framework()
         super(Pool, self).__init__(self.scheduler, *args, **kwargs)
 
     def close(self):

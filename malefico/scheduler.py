@@ -7,12 +7,12 @@ from collections import Counter
 from functools import partial
 
 
-from .constraint import pour
-from .core.interface import Scheduler
-from .placement import bfd
-from .core.messages import FrameworkInfo, TaskInfo
-from .core.scheduler import MesosSchedulerDriver
-from .utils import Interruptable, timeout
+from malefico.constraint import pour
+from malefico.core.interface import Scheduler
+from malefico.placement import bfd
+from malefico.core.messages import FrameworkInfo, TaskInfo,OfferID,Offer
+from malefico.core.scheduler import MesosSchedulerDriver
+from malefico.utils import Interruptable, timeout
 
 
 
@@ -58,8 +58,11 @@ class Framework(Scheduler):
         self.tasks[task.id] = task
 
     def on_offers(self, driver, offers):
+        offers = [Offer(**f) for f in offers]
         logging.info('Received offers: {}'.format(sum(offers)))
         self.report()
+
+
 
         # query tasks ready for scheduling
         staging = [self.tasks[status.task_id]
@@ -110,5 +113,6 @@ QueueScheduler = Framework
 
 if __name__ == '__main__':
     import getpass
-    sched = MesosSchedulerDriver(os.getenv('MESOS_MASTER'), QueueScheduler(), "Queue", getpass.getuser())
-    sched.start(block=True)
+    sched = Framework()
+    with  MesosSchedulerDriver(os.getenv('MESOS_MASTER') or "localhost",sched , "Queue", getpass.getuser()) as driver:
+        sched.wait()
