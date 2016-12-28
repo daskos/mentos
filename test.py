@@ -29,11 +29,9 @@ executor = {
 
 
 #task  = TaskInfo(name='command-task', command=CommandInfo(value='echo $HOME'), resources=[Cpus(0.1), Mem(128), Disk(0)])
-task = PythonTask(id=TaskID(value='test-task-id'),executor=executor,
+task = PythonTask(task_id=TaskID(value='test-task-id'),executor=executor,
                   fn=sum, args=[range(5)],
                   resources=[Cpus(0.1), Mem(128), Disk(0)])
 sched.submit(task)
 sched.wait()
-import time
-time.sleep(100000)
-
+print("Clean Exit, I guess")

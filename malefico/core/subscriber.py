@@ -161,10 +161,8 @@ class Subscriber(object):
             self.loop.add_callback(self.detector.close)
 
         log.warn("Terminating scheduler")
-        self.loop.add_callback(self.loop.stop)
-
+        self.loop.add_callback(lambda x: x.stop(), self.loop)
         self.status = "closed"
-
         while self.loop._running:
             sleep(0.001)
 

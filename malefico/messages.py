@@ -42,16 +42,14 @@ class PythonTaskStatus(PickleMixin, TaskStatus):
 
 # TODO create custom messages per executor
 class PythonTask(PickleMixin, TaskInfo):
-
-
-
     def __init__(self, fn=None, args=[], kwargs={},
                  resources=[Cpus(0.1), Mem(128), Disk(0)],
                  executor=None, retries=3,name="python-task", **kwds):
         super(PythonTask, self).__init__(**kwds)
-        self.status = PythonTaskStatus(task_id=self.id, state='TASK_STAGING')
+        self.status = PythonTaskStatus(task_id=self.task_id, state='TASK_STAGING')
         self.executor = executor or PythonExecutor()
-        self.data = (fn, args, kwargs)
+        if "data" not in kwargs:
+           self.data = (fn, args, kwargs)
         self.resources = resources
         self.name = name
         self.retries = retries
@@ -59,22 +57,23 @@ class PythonTask(PickleMixin, TaskInfo):
         self.labels = {"labels":[{"key": "python"}]}
 
     def __call__(self):
+
         fn, args, kwargs = self.data
         return fn(*args, **kwargs)
 
     def retry(self, status):
         if self.attempt < self.retries:
             log.info('Task {} attempt #{} rescheduled due to failure with state '
-                         '{} and message {}'.format(self.id, self.attempt,
+                         '{} and message {}'.format(self.task_id, self.attempt,
                                                     status.state, status.message))
             self.attempt += 1
             status.state = 'TASK_STAGING'
         else:
             log.error('Aborting due to task {} failed for {} attempts in state '
-                          '{} with message {}'.format(self.id, self.retries,
+                          '{} with message {}'.format(self.task_id, self.retries,
                                                       status.state, status.message))
             raise RuntimeError('Task {} failed with state {} and message {}'.format(
-                self.id, status.state, status.message))
+                self.task_id, status.state, status.message))
 
     def update(self, status):
         assert isinstance(status, TaskStatus)
@@ -87,14 +86,14 @@ class PythonTask(PickleMixin, TaskInfo):
     def on_update(self, status):
         self.status = status  # update task's status
         log.info('Task {} has been updated with state {}'.format(
-            self.id.value, status.state))
+            self.task_id.value, status.state))
 
     def on_success(self, status):
-        log.info('Task {} has been succeded'.format(self.id.value))
+        log.info('Task {} has been succeded'.format(self.task_id.value))
 
     def on_fail(self, status):
         log.error('Task {} has been failed with state {} due to {}'.format(
-            self.id.value, status.state, status.message))
+            self.task_id.value, status.state, status.message))
 
         try:
             raise status.exception  # won't retry due to code error in PythonTaskStatus
@@ -103,7 +102,7 @@ class PythonTask(PickleMixin, TaskInfo):
             self.retry(status)
         else:
             log.error('Aborting due to task {} failed with state {} and message '
-                          '{}'.format(self.id, status.state, status.message))
+                          '{}'.format(self.task_id, status.state, status.message))
 
 
 class PythonExecutor(ExecutorInfo):

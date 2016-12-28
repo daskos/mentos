@@ -119,7 +119,7 @@ def test_encode_resources():
 
 def test_task_info_resources():
     task = TaskInfo(name='test-task',
-                    id=TaskID(value='test-task-id'),
+                    task_id=TaskID(value='test-task-id'),
                     resources=[Cpus(0.1), Mem(16)],
                     command=CommandInfo(value='testcmd'))
     pb = task
@@ -358,7 +358,7 @@ def test_status_in_task_info():
 
 def test_encode_task_info():
     t = TaskInfo(name='test-task',
-                 id=TaskID(value='test-task-id'),
+                 task_id=TaskID(value='test-task-id'),
                  resources=[Cpus(0.1), Mem(16)],
                  command=CommandInfo(value='echo 100'))
 

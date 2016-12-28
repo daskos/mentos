@@ -450,20 +450,20 @@ class Offer(ResourcesMixin, Message):  # important order!
 
 
 class TaskInfo(ResourcesMixin, Message):
-    def __init__(self, id=None, **kwargs):
+    def __init__(self, task_id=None, **kwargs):
         super(TaskInfo, self).__init__(**kwargs)
-        self.id = id or str(uuid4())
-        self.status = TaskStatus(task_id=self.id, state='TASK_STAGING')
+        self.task_id = task_id or str(uuid4())
+        self.status = TaskStatus(task_id=self.task_id, state='TASK_STAGING')
 
-    @property
-    def id(self):  # more consistent naming
-        return self['task_id']
-
-    @id.setter
-    def id(self, value):
-        if not isinstance(value, TaskID):
-            value = TaskID(value=value)
-        self['task_id'] = value
+    # @property
+    # def id(self):  # more consistent naming
+    #     return self['task_id']
+    #
+    # @id.setter
+    # def id(self, value):
+    #     if not isinstance(value, TaskID):
+    #         value = TaskID(value=value)
+    #     self['task_id'] = value
 
     @property
     def slave_id(self):

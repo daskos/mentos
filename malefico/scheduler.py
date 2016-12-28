@@ -55,10 +55,10 @@ class Framework(Scheduler):
 
     def submit(self, task):  # supports commandtask, pythontask etc.
         assert isinstance(task, TaskInfo)
-        self.tasks[task.id] = task
+        self.tasks[task.task_id] = task
 
     def on_offers(self, driver, offers):
-        #offers = [Offer(**f) for f in offers]
+        offers = [Offer(**f) for f in offers]
         log.info('Received offers: {}'.format(sum(offers)))
         self.report()
 
@@ -89,19 +89,19 @@ class Framework(Scheduler):
                 log.exception('Exception occured during task launch!')
 
     def on_update(self, driver, status):
-        #status = TaskStatus(**status)
+        status = TaskStatus(**status)
         task = self.tasks[status.task_id]
         log.info('Updated task {} state to {}'.format(status.task_id,
                                                           status.state))
         try:
             task.update(status)  # creates new task.status in case of retry
-        except:
+        except Exception as ex:
             self.healthy = False
             driver.stop()
             raise
         finally:
             if status.has_terminated():
-                del self.tasks[task.id]
+                del self.tasks[task.task_id]
 
         self.report()
 
