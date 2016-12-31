@@ -90,9 +90,10 @@ executor = {
 
 }
 
-sched = SchedulerDriver(WEEE(executor), "Test", "arti")
+driver = SchedulerDriver(WEEE(executor), "Test", "arti")
 
-sched.start(block=True)
+driver.start(block=False)
 
-# time.sleep(100000)
-# sched.stop()
+import time
+while driver.loop._running:
+    time.sleep(0.1)
