@@ -1,17 +1,16 @@
 from __future__ import absolute_import, division, print_function
 
-import logging
 from collections import deque
+import logging
 from threading import Thread
 from time import sleep
 
+from malefico.utils import log_errors
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.httputil import HTTPHeaders
 from tornado.ioloop import IOLoop, PeriodicCallback
-
-from malefico.utils import log_errors
 
 log = logging.getLogger(__name__)
 

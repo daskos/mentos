@@ -5,8 +5,6 @@ from contextlib import contextmanager
 import logging
 
 from tornado import gen
-from tornado.escape import json_decode as decode
-from tornado.httpclient import HTTPClient
 
 logger = logging.getLogger(__name__)
 

@@ -208,6 +208,7 @@ class Scheduler(object):
             Tornado response object
         """
 
+
 class Executor(object):
 
     """Base class for Mesos executors.
@@ -318,6 +319,7 @@ class Executor(object):
         message: string
             Arbitrary byte stream
         """
+
     def on_outbound_error(self, driver, response):
         """Event handler triggered when an error has occured when sending data to the Executor
         Parameters

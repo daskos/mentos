@@ -1,7 +1,7 @@
+from os.path import abspath, dirname, join
 import sys
 import time
 import uuid
-from os.path import abspath, dirname, join
 
 from malefico.interface import Scheduler
 from malefico.scheduler import SchedulerDriver
@@ -94,6 +94,5 @@ driver = SchedulerDriver(WEEE(executor), "Test", "arti")
 
 driver.start(block=False)
 
-import time
 while driver.loop._running:
     time.sleep(0.1)

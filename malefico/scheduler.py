@@ -1,21 +1,21 @@
 from __future__ import absolute_import, division, print_function
 
+import getpass
 import logging
+import os
 import socket
 
 import six
+
+from malefico.subscriber import Subscriber
+from malefico.utils import (
+    encode_data, get_http_master_url, get_master, log_errors, master_info)
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from zoonado import Zoonado
 from zoonado.exc import ConnectionLoss, NoNode
-import os
-import getpass
-from malefico.subscriber import Subscriber
-from malefico.utils import (
-    encode_data, get_http_master_url, get_master, log_errors, master_info)
-
 
 log = logging.getLogger(__name__)
 

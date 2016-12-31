@@ -2,19 +2,18 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import os
+from os import environ as env
 import signal
+from threading import Thread
 import time
 import uuid
-from os import environ as env
-from threading import Thread
 
+from malefico.subscriber import Subscriber
+from malefico.utils import decode_data, encode_data, log_errors, parse_duration
 from tornado import gen
 from tornado.escape import json_encode as encode
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 
-from malefico.subscriber import Subscriber
-from malefico.utils import (
-    decode_data, encode_data, log_errors, parse_duration)
 log = logging.getLogger(__name__)
 
 
@@ -191,7 +190,6 @@ class ExecutorDriver(Subscriber):
         self.executor.on_launch(self, task_info)
 
     def on_launch(self, event):
-        # TODO God I hate life magic is going on here
         task_info = event['task']
         task_id = task_info['task_id']['value']
         assert task_id not in self.tasks
