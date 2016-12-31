@@ -3,17 +3,14 @@ import time
 import uuid
 from os.path import abspath, dirname, join
 
-from malefico.core.interface import Scheduler
-from malefico.core.scheduler import MesosSchedulerDriver
+from malefico.interface import Scheduler
+from malefico.scheduler import SchedulerDriver
 from malefico.utils import encode_data
 
 TASK_CPU = 0.2
 TASK_MEM = 128
 EXECUTOR_CPUS = 0.1
 EXECUTOR_MEM = 32
-
-
-
 
 
 def getResource(res, name):
@@ -68,8 +65,10 @@ class WEEE(Scheduler):
 
     def on_outbound_error(self, driver, response):
         pass
+
     def on_outbound_success(self, driver, response):
         pass
+
     def on_rescinded(self, driver, offer_id):
         pass
 
@@ -81,8 +80,8 @@ executor = {
     "command": {
         "value": '%s %s' % (
             sys.executable,
-            abspath(join(dirname(__file__)+"", 'executor.py'))
-            )
+            abspath(join(dirname(__file__) + "", 'executor.py'))
+        )
     },
     "resources": [
         dict(name='mem', type='SCALAR', scalar={'value': EXECUTOR_MEM}),
@@ -91,9 +90,9 @@ executor = {
 
 }
 
-sched = MesosSchedulerDriver(WEEE(executor), "Test", "arti")
+sched = SchedulerDriver(WEEE(executor), "Test", "arti")
 
 sched.start(block=True)
 
-#time.sleep(100000)
-#sched.stop()
+# time.sleep(100000)
+# sched.stop()

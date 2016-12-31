@@ -4,8 +4,8 @@ import sys
 import time
 from threading import Thread
 
-from malefico.core.executor import MesosExecutorDriver
-from malefico.core.interface import Executor
+from malefico.executor import ExecutorDriver
+from malefico.interface import Executor
 from malefico.utils import decode_data
 
 
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
     # debug
-    #time.sleep(20)
-    driver = MesosExecutorDriver(MinimalExecutor())
+    # time.sleep(20)
+    driver = ExecutorDriver(MinimalExecutor())
     driver.start(block=True)
-    #time.sleep(100000)
+    # time.sleep(100000)
