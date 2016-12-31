@@ -57,15 +57,6 @@ class SchedulerDriver(Subscriber):
             "HEARTBEAT": self.on_heartbeat
         }
 
-    @property
-    def framework_id(self):
-        id = self.framework.get('framework_id')
-        return id and id.get('value')
-
-    @framework_id.setter
-    def framework_id(self, id):
-        self.framework['framework_id'] = dict(value=id)
-
     def _handle_outbound(self, response):
         if response.code not in (200, 202):
             log.error("Problem with request to  Master for payload %s" %
@@ -99,9 +90,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "REQUEST",
             "requests": requests
         }
@@ -112,9 +101,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "KILL",
             "kill": {
                 "task_id": {
@@ -134,9 +121,7 @@ class SchedulerDriver(Subscriber):
         payload = {}
         if task_id and agent_id:
             payload = {
-                "framework_id": {
-                    "value": self.framework_id
-                },
+                 "framework_id": self.framework_id,
                 "type": "RECONCILE",
                 "reconcile": {
                     "tasks": [{
@@ -153,9 +138,7 @@ class SchedulerDriver(Subscriber):
 
         else:
             payload = {
-                "framework_id": {
-                    "value": self.framework_id
-                },
+                "framework_id": self.framework_id,
                 "type": "RECONCILE",
                 "reconcile": {"tasks": []}
             }
@@ -176,9 +159,7 @@ class SchedulerDriver(Subscriber):
             decline['filters'] = filters
 
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "DECLINE",
             "decline": decline
         }
@@ -213,9 +194,7 @@ class SchedulerDriver(Subscriber):
             accept['filters'] = filters
 
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "ACCEPT",
             "accept": accept
         }
@@ -226,9 +205,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.frameworkId
-            },
+             "framework_id": self.framework_id,
             "type": "REVIVE"
         }
         self.loop.add_callback(self._send, payload)
@@ -244,9 +221,7 @@ class SchedulerDriver(Subscriber):
             return
 
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "ACKNOWLEDGE",
             "acknowledge": {
                 "agent_id": status["agent_id"],
@@ -261,9 +236,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "MESSAGE",
             "message": {
                 "agent_id": {
@@ -283,9 +256,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "SHUTDOWN",
             "kill": {
                 "executor_id": {
@@ -303,9 +274,7 @@ class SchedulerDriver(Subscriber):
         """
         """
         payload = {
-            "framework_id": {
-                "value": self.framework_id
-            },
+            "framework_id": self.framework_id,
             "type": "TEARDOWN"
         }
 
@@ -327,7 +296,7 @@ class SchedulerDriver(Subscriber):
             self.scheduler.on_reregistered(
                 self, self.framework_id, self.leading_master)
         else:
-            self.framework_id = info['framework_id']["value"]
+            self.framework_id = info["framework_id"]
             self.scheduler.on_registered(
                 self, self.framework_id,
                 self.leading_master
@@ -418,6 +387,9 @@ class SchedulerDriver(Subscriber):
     def _detect_master(self, timeout=5):
         with log_errors():
             try:
+                if  self.status not in ("disconnected", "closed"):
+                    yield gen.sleep(timeout)
+
                 if "zk://" in self.master:
                     log.warn("Using Zookeeper for discovery")
                     quorum = ",".join([zoo[zoo.index('://') + 3:]

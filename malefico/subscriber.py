@@ -26,6 +26,7 @@ class Subscriber(object):
         self.detector = None
         self.buffer = deque()
         self._handlers = {}
+        self.framework_id = None
         self.leading_master = leading_master
 
     @gen.coroutine
@@ -65,6 +66,11 @@ class Subscriber(object):
                 try:
                     if "200 OK" in response:
                         self.connection_successful = True
+                    #Oh god magic
+                    elif "404" in response:
+                         self.loop.add_callback(self.reconnect,retry_timeout)
+                    elif "307" in response:
+                        self.loop.add_callback(self.reconnect, retry_timeout)
                     else:
                         h.parse_line(response)
                     if self.connection_successful and "Mesos-Stream-Id" in h:
@@ -98,7 +104,8 @@ class Subscriber(object):
 
     @gen.coroutine
     def reconnect(self, retry_timeout=1):
-        self.leading_master = None
+        if "zk://" in self.master:
+            self.leading_master = None
         self.connection_successful = False
         self.buffer = deque()
         self.status = "disconnected"
@@ -110,7 +117,7 @@ class Subscriber(object):
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:
-                # Ehm What ?
+                #TODO Ehm What ?
                 if b"type" not in chunk:
                     log.warn(chunk)
                     return
