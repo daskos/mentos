@@ -89,8 +89,9 @@ executor = {
     ]
 
 }
-#master="zk://localhost:2181"
-driver = SchedulerDriver(WEEE(executor), "Test", "arti")
+#
+driver = SchedulerDriver(WEEE(executor), "Test", "arti",
+                         master="zk://localhost:2181")
 
 driver.start(block=False)
 

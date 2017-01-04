@@ -32,7 +32,7 @@ class Subscriber(object):
     @gen.coroutine
     def _start(self, **kwargs):
         if not self.leading_master:
-            self.loop.add_callback(self._detect_master)
+           yield self._detect_master()
         yield self.subscribe()
 
     def start(self, block=False, **kwargs):
