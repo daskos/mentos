@@ -6,10 +6,11 @@ import os
 import socket
 
 import six
-
-from malefico.subscriber import Subscriber
-from malefico.utils import (
-    encode_data, get_http_master_url, get_master, log_errors, master_info)
+from threading import Thread
+from time import sleep
+from tornado.ioloop import IOLoop, PeriodicCallback
+from malefico.subscription import Subscription
+from malefico.utils import encode_data,log_errors
 from tornado import gen
 from tornado.escape import json_decode as decode
 from tornado.escape import json_encode as encode
@@ -20,15 +21,15 @@ from zoonado.exc import ConnectionLoss, NoNode
 log = logging.getLogger(__name__)
 
 
-class SchedulerDriver(Subscriber):
+class SchedulerDriver(object):
 
     def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost",
                  failover_timeout=100, capabilities=[],
                  implicit_acknowledgements=True, loop=None):
 
-        super(SchedulerDriver, self).__init__(loop=loop)
-        self.master = master
+        self.loop = loop or IOLoop()
 
+        self.master = master
         self.leading_master_seq = None
         self.leading_master_info = None
 
@@ -56,6 +57,24 @@ class SchedulerDriver(Subscriber):
             "ERROR": self.on_error,
             "HEARTBEAT": self.on_heartbeat
         }
+        self.session = Subscription(self.gen_request,self._handle_events,master=master,endpoint="/api/v1/scheduler",timeout=failover_timeout)
+
+
+    def start(self, block=False, **kwargs):
+        """ Start scheduler running in separate thread """
+        if hasattr(self, '_loop_thread'):
+            return
+        if not self.loop._running:
+
+            self._loop_thread = Thread(target=self.loop.start)
+            self._loop_thread.daemon = True
+            self._loop_thread.start()
+            while not self.loop._running:
+                sleep(0.001)
+
+        self.loop.add_callback(self.session.start, detector=True)
+        if block:
+            self._loop_thread.join()
 
     def _handle_outbound(self, response):
         if response.code not in (200, 202):
@@ -67,6 +86,7 @@ class SchedulerDriver(Subscriber):
             self.scheduler.on_outbound_success(self, response)
             log.debug("Succeed request to master %s" %
                       response.request.body)
+
 
     def _send(self, payload):
 
@@ -118,7 +138,6 @@ class SchedulerDriver(Subscriber):
     def reconcile(self, task_id, agent_id):
         """
         """
-        payload = {}
         if task_id and agent_id:
             payload = {
                  "framework_id": self.framework_id,
@@ -297,6 +316,7 @@ class SchedulerDriver(Subscriber):
                 self, self.framework_id, self.leading_master)
         else:
             self.framework_id = info["framework_id"]
+            self.framework['framework_id'] = self.framework_id
             self.scheduler.on_registered(
                 self, self.framework_id,
                 self.leading_master
@@ -360,134 +380,20 @@ class SchedulerDriver(Subscriber):
                 log.warn("Problem dispatching event %s" % message)
                 log.exception(ex)
 
-    def gen_request(self, handler):
-        data = encode({
-            'type': 'SUBSCRIBE',
-            'subscribe': {
-                'framework_info': self.framework
-            }
-        })
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Connection': 'close',
-            'Content-Length': str(len(data))
-        }
-        subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/scheduler",
-                                     method='POST',
-                                     headers=headers,
-                                     body=data,
-                                     streaming_callback=self._handlechunks,
-                                     header_callback=handler,
-                                     follow_redirects=False,
-                                     request_timeout=1e15)
-        return subscription_r
-
-    @gen.coroutine
-    def _detect_master(self, timeout=5):
-        with log_errors():
-            try:
-                if  self.status not in ("disconnected", "closed"):
-                    yield gen.sleep(timeout)
-
-                if "zk://" in self.master:
-                    log.warn("Using Zookeeper for discovery")
-                    quorum = ",".join([zoo[zoo.index('://') + 3:]
-                                       for zoo in self.master.split(",")])
-                    self.detector = Zoonado(quorum)
-                    try:
-                        yield self.detector.start()
-
-                        @gen.coroutine
-                        def children_changed(children):
-                            yield gen.sleep(timeout)
-                            current_state = yield self.detector.get_children("/mesos")
-                            seq = get_master(current_state)
-                            if seq == self.leading_master_seq and self.status == "disconnected":
-                                log.warn(
-                                    "Master did not change, maybe just starting up, will watch for changes")
-                                yield gen.sleep(timeout)
-                            elif seq == -1:
-                                log.warn(
-                                    "No master detected, will watch for changes")
-                                log.warn("Waiting for %d" % timeout)
-                                self.leading_master = None
-                                yield gen.sleep(timeout)
-                            elif self.status in ("disconnected", "closed"):
-                                log.warn("New master detected at %s" %
-                                         self.leading_master)
-                                self.leading_master_seq = seq
-                                try:
-                                    data = yield self.detector.get_data('/mesos/' + seq)
-                                    self.leading_master_info = decode(
-                                        data)
-                                    self.leading_master = get_http_master_url(
-                                        self.leading_master_info)
-                                except NoNode:
-                                    log.warn(
-                                        "Problem fetching Master node from zookeeper")
-
-                        watcher = self.detector.recipes.ChildrenWatcher()
-                        watcher.add_callback(
-                            '/mesos', children_changed)
-                        children = yield self.detector.get_children('/mesos')
-                        yield children_changed(children)
-                    except ConnectionLoss:
-                        pass
-                    except Exception as ex:
-                        log.error("Unhandled exception in Detector")
-                        yield self.detector.close()
-                else:
-                    # Two implementations are possible follow the 307 or do
-                    # not, following has the advantage of getting more info
-                    def get_actual_master(response):
-                        if response.code == 307:
-                            actual_master = six.moves.urllib.parse.urlparse(
-                                response.headers["location"])
-                            self.leading_master_info = master_info(
-                                actual_master.netloc)
-                            self.leading_master = get_http_master_url(
-                                self.leading_master_info)
-                            log.warn("New master detected at %s" %
-                                     self.leading_master)
-                        elif response.code in (200, 202):
-                            self.leading_master_info = master_info(
-                                self.master)
-                            self.leading_master = get_http_master_url(
-                                self.leading_master_info)
-                            log.warn("New master detected at %s" %
-                                     self.leading_master)
-
-                    potential_master = get_http_master_url(
-                        master_info(self.master))
-                    check_master_r = HTTPRequest(url=potential_master + "/state",
-                                                 method='GET',
-                                                 headers={
-                                                     'content-type': 'application/json',
-                                                     'accept': 'application/json',
-                                                     'connection': 'close',
-                                                 },
-                                                 follow_redirects=False)
-
-                    http_client = AsyncHTTPClient()
-                    yield http_client.fetch(check_master_r, get_actual_master)
-
-            except HTTPError as ex:
-                if ex.code == "307":
-                    pass
-                else:
-                    log.warn(
-                        "Problem resolving Master. Will retry.")
-                    log.warn("Waiting for %d" % timeout)
-                    yield gen.sleep(timeout)
-                    yield self._detect_master(timeout)
-            except Exception as ex:
-                log.error("Unhandeled exception")
-                log.exception(ex)
-
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (
             self.__class__.__name__, self.master,
             self.leading_master, self.framework)
 
     __repr__ = __str__
+
+    def __enter__(self):
+        if not self.loop._running:
+            self.start(block=False)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.stop()
+
+    def __del__(self):
+        self.stop()

@@ -8,7 +8,7 @@ from threading import Thread
 import time
 import uuid
 
-from malefico.subscriber import Subscriber
+from malefico.subscriber import Subsc
 from malefico.utils import decode_data, encode_data, log_errors, parse_duration
 from tornado import gen
 from tornado.escape import json_encode as encode
@@ -119,6 +119,7 @@ class ExecutorDriver(Subscriber):
                 headers=headers,
             ), self._handle_outbound
         )
+
 
     def update(self, status):
         """
