@@ -3,9 +3,8 @@ from __future__ import unicode_literals
 import collections
 import logging
 
-from tornado import concurrent
-
 from malefico.utils import drain
+from tornado import concurrent
 
 log = logging.getLogger(__name__)
 

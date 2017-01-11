@@ -1,20 +1,21 @@
 from __future__ import unicode_literals
 
 import collections
+from collections import deque
 import logging
 import re
 import struct
 import sys
-from tornado import ioloop, iostream, gen, concurrent, tcpclient
-from malefico.utils import encode, decode
-from six.moves.urllib.parse import urlparse
+
 from six import raise_from
-from malefico.utils import log_errors
-from tornado import gen
+
+from malefico.exceptions import (
+    BadSubscription, ConnectError, ConnectionLost, MasterRedirect)
+from malefico.utils import decode, encode, log_errors
+from six.moves.urllib.parse import urlparse
+from tornado import concurrent, gen, ioloop, iostream, tcpclient
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from tornado.httputil import HTTPHeaders
-from collections import deque
-from malefico.exceptions import MasterRedirect, ConnectError, BadSubscription, ConnectionLost
 
 log = logging.getLogger(__name__)
 payload_log = logging.getLogger(__name__ + ".payload")
@@ -83,9 +84,11 @@ class Connection(object):
             yield self.subscription_client.fetch(http_request)
         except HTTPError as ex:
             if ex.code == 599:
-                raise_from(ConnectionLost("Disconnected from endpoint, will try to reconnect"), None)
+                raise_from(ConnectionLost(
+                    "Disconnected from endpoint, will try to reconnect"), None)
             if ex.code == 400:
-                raise_from(BadSubscription("Got a 400 code from endpoint. Probably bad subscription request"), ex)
+                raise_from(BadSubscription(
+                    "Got a 400 code from endpoint. Probably bad subscription request"), ex)
         except ConnectionRefusedError as ex:
             log.error("Problem subscribing: %s" % self.endpoint)
         except Exception as ex:
@@ -126,21 +129,21 @@ class Connection(object):
             yield self.outbound_client.fetch(request)
         except HTTPError as ex:
             if ex.code == 307:
-                raise_from(MasterRedirect(urlparse(ex.response.headers["location"]).netloc), None)
+                raise_from(MasterRedirect(
+                    urlparse(ex.response.headers["location"]).netloc), None)
         except ConnectionRefusedError as ex:
             log.debug("Problem reaching: %s" % self.endpoint)
             raise ex
         except Exception as ex:
-            log.debug("Unhandled exception when connecting to %s",  self.endpoint)
+            log.debug("Unhandled exception when connecting to %s",
+                      self.endpoint)
             raise ex
-
 
     def _handle_chunks(self, chunk):
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:
                 log.debug("Buffer length %s" % len(self.buffer))
-                # TODO Ehm What ?
                 if b"Failed to" in chunk:
                     log.warn("Got error from Master: %s" % chunk.decode())
                     return
@@ -177,14 +180,12 @@ class Connection(object):
 
                 # yield self.(msg)
             except Exception as ex:
-                log.warn("Problem parsing response from endpoint. Might be a subscription error")
-
+                log.warn(
+                    "Problem parsing response from endpoint. Might be a subscription error")
 
     def close(self):
         if self.closing:
             return
-
-
 
         self.closing = True
         self.subscription_client.close()

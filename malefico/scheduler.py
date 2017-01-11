@@ -7,17 +7,16 @@ import socket
 from threading import Thread
 from time import sleep
 
-from toolz import merge
-from tornado import gen
-from tornado.ioloop import IOLoop
-
-from malefico.subscription import Subscription, Event
+from malefico.subscription import Event, Subscription
 from malefico.utils import encode_data
+from toolz import merge
+from tornado.ioloop import IOLoop
 
 log = logging.getLogger(__name__)
 
 
 class SchedulerDriver(object):
+
     def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost",
                  failover_timeout=100, capabilities=None,
                  implicit_acknowledgements=True, handlers=None, loop=None):
@@ -88,9 +87,8 @@ class SchedulerDriver(object):
             "type": "REQUEST",
             "requests": requests
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug('Request resources from Mesos')
-
 
     def kill(self, task_id, agent_id):
 
@@ -106,10 +104,9 @@ class SchedulerDriver(object):
                 }
             }
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug('Kills task {}'.format(task_id))
 
-    
     def reconcile(self, task_id, agent_id):
         """
         """
@@ -137,11 +134,10 @@ class SchedulerDriver(object):
             }
             log.debug("Reconciling all tasks ")
         if payload:
-            self.loop.add_callback(self.subscription.send,payload)
+            self.loop.add_callback(self.subscription.send, payload)
         else:
             log.debug("Agent and Task not set")
 
-    
     def decline(self, offer_ids, filters=None):
         """
         """
@@ -157,10 +153,9 @@ class SchedulerDriver(object):
             "decline": decline
         }
 
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug('Declines offer {}'.format(offer_ids))
 
-    
     def launch(self, offer_ids, tasks, filters=None):
         if not tasks:
             return self.decline(offer_ids, filters=filters)
@@ -173,8 +168,7 @@ class SchedulerDriver(object):
         }]
         self.accept(offer_ids, operations, filters=filters)
 
-        log.debug('Launching {} with filters '.format(operations,filters))
-
+        log.debug('Launching {} with filters '.format(operations, filters))
 
     def accept(self, offer_ids, operations, filters=None):
         """
@@ -195,10 +189,9 @@ class SchedulerDriver(object):
                 "type": "ACCEPT",
                 "accept": accept
             }
-            self.loop.add_callback(self.subscription.send,payload)
+            self.loop.add_callback(self.subscription.send, payload)
             log.debug('Accepts offers {}'.format(offer_ids))
 
-    
     def revive(self):
         """
         """
@@ -206,11 +199,10 @@ class SchedulerDriver(object):
 
             "type": "REVIVE"
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug(
             'Revives; removes all filters previously set by framework')
 
-    
     def acknowledge(self, status):
         """
         """
@@ -228,10 +220,9 @@ class SchedulerDriver(object):
                 "uuid": status["uuid"]
             }
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug('Acknowledges status update {}'.format(status))
 
-    
     def message(self, executor_id, agent_id, message):
         """
         """
@@ -248,11 +239,10 @@ class SchedulerDriver(object):
                 "data": encode_data(message)
             }
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug('Sends message `{}` to executor `{}` on agent `{}`'.format(
             message, executor_id, agent_id))
 
-    
     def shutdown(self, agent_id, executor_Id):
         """
         """
@@ -268,10 +258,9 @@ class SchedulerDriver(object):
                 }
             }
         }
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug("Sent shutdown signal")
 
-    
     def teardown(self, framework_id):
         """
         """
@@ -280,27 +269,24 @@ class SchedulerDriver(object):
             "type": "TEARDOWN"
         }
 
-        self.loop.add_callback(self.subscription.send,payload)
+        self.loop.add_callback(self.subscription.send, payload)
         log.debug("Sent teardown signal")
 
-    
     def on_error(self, event):
         message = event['message']
         self.scheduler.on_error(self, message)
-        log.debug("Got error %s"%event)
+        log.debug("Got error %s" % event)
 
-    
     def on_heartbeat(self, event):
         self.scheduler.on_heartbeat(self, event)
         log.debug("Got Heartbeat")
 
-    
-    def on_subscribed(self,info):
+    def on_subscribed(self, info):
         self.scheduler.on_reregistered(
             self, info["framework_id"], self.subscription.master_info.info)
 
         log.debug("Subscribed %s" % info)
-    
+
     def on_offers(self, event):
         offers = event['offers']
         self.scheduler.on_offers(
@@ -308,19 +294,16 @@ class SchedulerDriver(object):
         )
         log.debug("Got offers %s" % event)
 
-    
     def on_rescind_inverse(self, event):
         offer_id = event['offer_id']
         self.scheduler.on_rescind_inverse(self, offer_id)
         log.debug("Inverse rescind offer %s" % event)
 
-    
     def on_rescind(self, event):
         offer_id = event['offer_id']
         self.scheduler.on_rescinded(self, offer_id)
         log.debug("Rescind offer %s" % event)
 
-    
     def on_update(self, event):
         status = event['status']
         self.scheduler.on_update(self, status)
@@ -328,7 +311,6 @@ class SchedulerDriver(object):
             self.acknowledge(status)
         log.debug("Got update %s" % event)
 
-    
     def on_message(self, event):
         executor_id = event['executor_id']
         agent_id = event['agent_id']
@@ -338,7 +320,6 @@ class SchedulerDriver(object):
         )
         log.debug("Got message %s" % event)
 
-    
     def on_failure(self, event):
         agent_id = event['agent_id']
         if 'executor_id' not in event:
@@ -351,7 +332,7 @@ class SchedulerDriver(object):
                 self, executor_id,
                 agent_id, status
             )
-        log.debug("Lost executor %s on agent %s" % (executor_id,agent_id))
+        log.debug("Lost executor %s on agent %s" % (executor_id, agent_id))
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (

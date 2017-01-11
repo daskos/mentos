@@ -1,14 +1,16 @@
 from __future__ import print_function
 
+import logging
 import sys
 from threading import Thread
 import time
-import logging
+
 from malefico.executor import ExecutorDriver
 from malefico.interface import Executor
 from malefico.utils import decode_data
 
 log = logging.getLogger(__name__)
+
 
 class MinimalExecutor(Executor):
 
@@ -47,7 +49,7 @@ if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
     import time
-    #time.sleep(10)
+    # time.sleep(10)
     # debug
     driver = ExecutorDriver(MinimalExecutor())
     driver.start(block=True)

@@ -18,7 +18,7 @@ setup(name='malefico',
       packages=['malefico'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
-      install_requires=['zoonado', 'tornado', 'six','toolz'],
+      install_requires=['zoonado', 'tornado', 'six', 'toolz'],
       setup_requires=['pytest-runner'],
       tests_require=['pytest-mock', 'pytest'],
       zip_safe=True)

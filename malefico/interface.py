@@ -2,11 +2,11 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import sys
+
 log = logging.getLogger(__name__)
 
 
 class Scheduler(object):
-
 
     def on_registered(self, driver, framework_id, master):
         """Event handler triggered when the scheduler successfully registers
@@ -23,9 +23,8 @@ class Scheduler(object):
         -------
         self
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_reregistered(self, driver, framework_id, master):
         """Event handler triggered when the scheduler re-registers with a newly
            elected master.
@@ -40,9 +39,9 @@ class Scheduler(object):
         master : Master
             Information about the master itself
         """
-        log.debug("Method {} not implemented".format( sys._getframe().f_code.co_name))
+        log.debug("Method {} not implemented".format(
+            sys._getframe().f_code.co_name))
 
-    
     def on_disconnected(self, driver):
         """Event handler triggereg when the scheduler becomes disconnected from
            the master.
@@ -52,9 +51,8 @@ class Scheduler(object):
         driver: SchedulerDriver
             Interface for interacting with Mesos Master
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_offers(self, driver, offers):
         """Event handler triggered when resources have been offered to this
            framework.
@@ -77,9 +75,8 @@ class Scheduler(object):
         offers: list of Offer
             Resource offer instances
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_rescinded(self, driver, offer_id):
         """Event handler triggered when an offer is no longer valid.
         (e.g., the slave was lost or another framework used resources in the
@@ -95,9 +92,8 @@ class Scheduler(object):
         offer_id: string
             The unique identifier of the Mesos offer
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_rescind_inverse(self, driver, offer_id):
         """Event handler triggered when an offer is no longer valid.
         (e.g., the slave was lost or another framework used resources in the
@@ -113,9 +109,8 @@ class Scheduler(object):
         offer_id: string
             The unique identifier of the Mesos offer
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_update(self, driver, status):
         """Event handler triggered when the status of a task has changed.
         (e.g., a slave is lost and so the task is lost, a task finishes and an
@@ -135,9 +130,8 @@ class Scheduler(object):
         status: string
             Task Status
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_message(self, driver, executor_id, slave_id, message):
         """Event handler triggered when an executor sends a message.
         These messages are best effort; do not expect a framework message to be
@@ -153,9 +147,8 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_slave_lost(self, driver, slave_id):
         """Event handler triggered when a slave has been determined unreachable.
         (e.g., machine failure, network partition.)
@@ -168,9 +161,8 @@ class Scheduler(object):
         slave_id: string
             The unique identifier of the lost Mesos slave
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_executor_lost(self, driver, executor_id, slave_id, status):
         """Event handler triggered when an executor has exited/terminated.
         Note that any tasks running will have TASK_LOST status updates
@@ -188,9 +180,8 @@ class Scheduler(object):
         status: int
             TODO: figure it out
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_error(self, driver, message):
         """Event handler triggered when there is an unrecoverable error in the
            scheduler or scheduler driver.
@@ -202,9 +193,8 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_heartbeat(self, driver, message):
         """Event handler triggered when a heartbeat is recieved from the Master.
         Parameters
@@ -214,9 +204,8 @@ class Scheduler(object):
         message: string
             Arbitrary byte stream
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_outbound_error(self, driver, response):
         """Event handler triggered when an error has occured when sending data to the Master
         Parameters
@@ -226,9 +215,8 @@ class Scheduler(object):
         response: Response
             Tornado response object
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_outbound_success(self, driver, response):
         """Event handler triggered when a request was successful when sending data to the Master
         Parameters
@@ -238,7 +226,7 @@ class Scheduler(object):
         response: Response
             Tornado response object
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
 
 class Executor(object):
@@ -247,7 +235,6 @@ class Executor(object):
     methods they don't override.
     """
 
-    
     def on_registered(self, driver, executor, framework, slave):
         """Event handler triggered when the executor driver has been able to
            successfully connect with Mesos.
@@ -264,9 +251,8 @@ class Executor(object):
         slave: Salve
             TODO: write docs
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_reregistered(self, driver, slave):
         """Event handler triggered when the executor re-registers with a
            restarted slave.
@@ -277,9 +263,8 @@ class Executor(object):
         slave: Slave
             TODO: write docs
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_disconnected(self, driver):
         """Event handler triggered when the executor becomes "disconnected" from
            the slave.
@@ -289,9 +274,8 @@ class Executor(object):
         driver: ExecutorDriver
             Interface for interacting with Mesos Slave
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_launch(self, driver, task):
         """Event handler triggered when a task has been launched on this
            executor (initiated via Scheduler.launch).
@@ -305,9 +289,8 @@ class Executor(object):
         task: Task
             TODO: write docs
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_kill(self, driver, task_id):
         """Event handler triggered when a task running within this executor has
            been killed (via SchedulerDriver.kill).
@@ -321,9 +304,8 @@ class Executor(object):
         task_id: string
             Unique identifier of the killed task
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_message(self, driver, message):
         """Event handler triggered when a framework message has arrived for this
            executor.
@@ -336,7 +318,7 @@ class Executor(object):
         message: string
             Arbitrary byte stream
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
     def on_shutdown(self, driver):
         """Event handler triggered when the executor should terminate all of its
@@ -350,9 +332,8 @@ class Executor(object):
         driver: ExecutorDriver
             Interface for interacting with Mesos Slave
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_error(self, driver, message):
         """Event handler triggered when a fatal error has occurred with the
            executor and/or executor driver.
@@ -364,9 +345,8 @@ class Executor(object):
         message: string
             Arbitrary byte stream
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_outbound_error(self, driver, response):
         """Event handler triggered when an error has occured when sending data to the Executor
         Parameters
@@ -376,9 +356,8 @@ class Executor(object):
         response: Response
             Tornado response object
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    
     def on_outbound_success(self, driver, response):
         """Event handler triggered when a request was successful when sending data to the Executor
         Parameters
@@ -388,4 +367,4 @@ class Executor(object):
         response: Response
             Tornado response object
         """
-        log.debug("{} Implemented".format( sys._getframe().f_code.co_name))
+        log.debug("{} Implemented".format(sys._getframe().f_code.co_name))

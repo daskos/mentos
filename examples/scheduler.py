@@ -1,3 +1,4 @@
+import logging
 from os.path import abspath, dirname, join
 import sys
 import time
@@ -6,8 +7,8 @@ import uuid
 from malefico.interface import Scheduler
 from malefico.scheduler import SchedulerDriver
 from malefico.utils import encode_data
-
 from tornado import gen
+
 TASK_CPU = 0.2
 TASK_MEM = 128
 EXECUTOR_CPUS = 0.1
@@ -27,10 +28,8 @@ class WEEE(Scheduler):
         self.executor = executor
         self.one = False
 
-
     def on_heartbeat(self, driver, message):
         pass
-
 
     def on_offers(self, driver, offers):
 
@@ -92,7 +91,6 @@ executor = {
     ]
 
 }
-import logging
 logging.getLogger().setLevel(logging.DEBUG)
 driver = SchedulerDriver(WEEE(executor), "Test", "arti",
                          master="zk://localhost:2181")
@@ -100,5 +98,3 @@ driver = SchedulerDriver(WEEE(executor), "Test", "arti",
 with driver:
     while driver.loop._running:
         time.sleep(0.1)
-
-

@@ -4,8 +4,8 @@ import collections
 import logging
 import time
 
-from tornado import gen
 from malefico.exceptions import FailedRetry
+from tornado import gen
 
 log = logging.getLogger(__name__)
 

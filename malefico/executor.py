@@ -9,9 +9,11 @@ import time
 import uuid
 from time import sleep
 from tornado.ioloop import IOLoop
-from malefico.subscription import Subscription,Event
+from malefico.subscription import Subscription, Event
 from malefico.exceptions import ExecutorException
-from malefico.utils import decode_data, encode_data, log_errors, parse_duration
+from malefico.utils import decode_data
+from malefico.utils import encode_data
+from malefico.utils import parse_duration
 from toolz import merge
 log = logging.getLogger(__name__)
 
@@ -27,7 +29,6 @@ class ExecutorDriver():
         """
         self.loop = loop or IOLoop()
 
-
         self.master = env['MESOS_AGENT_ENDPOINT']
         log.debug("master is aaaaaaaaaaa %s" % self.master)
 
@@ -35,8 +36,8 @@ class ExecutorDriver():
         self.executor_id = dict(value=env['MESOS_EXECUTOR_ID'])
 
         self.framework = {
-            "framework_id":self.framework_id,
-            "executor_id":self.executor_id
+            "framework_id": self.framework_id,
+            "executor_id": self.executor_id
         }
 
         grace_shutdown_period = env.get('MESOS_EXECUTOR_SHUTDOWN_GRACE_PERIOD')
@@ -52,23 +53,21 @@ class ExecutorDriver():
         self.framework_info = None
         self.executor_info = None
 
-
         self.executor = executor
         self.handlers = merge({
             Event.SUBSCRIBED: self.on_subscribed,
             Event.CLOSE: self.on_close,
             Event.MESSAGE: self.on_message,
             Event.ERROR: self.on_error,
-            Event.ACKNOWLEDGED:self.on_acknowledged,
-            Event.KILL:self.on_kill,
-            Event.LAUNCH_GROUP:self.on_launch_group,
-            Event.LAUNCH:self.on_launch,
-            Event.SHUTDOWN:self.on_shutdown
+            Event.ACKNOWLEDGED: self.on_acknowledged,
+            Event.KILL: self.on_kill,
+            Event.LAUNCH_GROUP: self.on_launch_group,
+            Event.LAUNCH: self.on_launch,
+            Event.SHUTDOWN: self.on_shutdown
         }, handlers or {})
 
-
         self.subscription = Subscription(self.framework, self.master, "/api/v1/executor", self.handlers,
-                                     loop=self.loop)
+                                         loop=self.loop)
 
         self.subscription.tasks = {}
         self.subscription.updates = {}
@@ -169,7 +168,7 @@ class ExecutorDriver():
     def on_launch_group(self, event):
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        if task_id  in self.subscription.tasks:
+        if task_id in self.subscription.tasks:
             raise ExecutorException("Task Exists")
         self.subscription.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
@@ -179,7 +178,7 @@ class ExecutorDriver():
 
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        if task_id  in self.subscription.tasks:
+        if task_id in self.subscription.tasks:
             raise ExecutorException("Task Exists")
         self.subscription.tasks[task_id] = task_info
 
@@ -214,8 +213,6 @@ class ExecutorDriver():
         self.executor.on_shutdown(self)
         log.debug("Got Shutdown command")
         self.stop()
-
-
 
     def _delay_kill(self):
         def _():

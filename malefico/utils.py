@@ -1,19 +1,21 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import (
+    absolute_import, division, print_function, unicode_literals)
 
 from binascii import a2b_base64, b2a_base64
 from contextlib import contextmanager
-from tornado.escape import json_decode as decode
-from tornado.escape import json_encode as encode
-from tornado import gen,ioloop
-
-from toolz import compose
-from malefico.exceptions import NoLeadingMaster
 import logging
 
-
+from malefico.exceptions import NoLeadingMaster
+from toolz import compose
+from tornado import gen, ioloop
+from tornado.escape import json_decode
+from tornado.escape import json_encode
+from zoonado import Zoonado
 
 log = logging.getLogger(__name__)
 
+decode = json_decode
+encode = json_encode
 
 def encode_data(data):
     return b2a_base64(data).strip().decode('ascii')
@@ -59,7 +61,7 @@ def parse_duration(s):
             postfix = n
             break
 
-    #TODO exceptions?
+    # TODO exceptions?
     assert unit is not None, \
         'Unknown duration \'%s\'; supported units are %s' % (
             s, ','.join('\'%s\'' % n for n in POSTFIX)
@@ -69,7 +71,6 @@ def parse_duration(s):
     return n * unit
 
 
-from zoonado import Zoonado
 
 
 class MasterInfo(object):
@@ -89,43 +90,43 @@ class MasterInfo(object):
 
             ioloop.IOLoop.current().add_callback(self.detector.start)
 
-
-    def redirected_uri(self,uri):
+    def redirected_uri(self, uri):
         self.uri = uri
 
     @gen.coroutine
-    def get_endpoint(self,path=""):
-            if self.detector:
+    def get_endpoint(self, path=""):
+        if self.detector:
 
-                children = yield self.detector.get_children("/mesos")
-                children = [child for child in children if child != 'log_replicas']
-                if not children:
-                    log.error("No leading Master found in zookeeper")
-                    raise NoLeadingMaster("No leading Master found in zookeeper")
-                self.seq = min(children)
-                data = yield self.detector.get_data('/mesos/' + self.seq)
-                self.info = decode(data)
+            children = yield self.detector.get_children("/mesos")
+            children = [child for child in children if child != 'log_replicas']
+            if not children:
+                log.error("No leading Master found in zookeeper")
+                raise NoLeadingMaster("No leading Master found in zookeeper")
+            self.seq = min(children)
+            data = yield self.detector.get_data('/mesos/' + self.seq)
+            self.info = decode(data)
+        else:
+            host_port = self.uri.split(":")
+            log.debug(host_port)
+            if len(host_port) == 2:
+                self.info["address"]["hostname"] = host_port[0]
+                self.info["address"]["port"] = int(host_port[1])
             else:
-                host_port = self.uri.split(":")
-                log.debug(host_port)
-                if len(host_port) == 2:
-                    self.info["address"]["hostname"] = host_port[0]
-                    self.info["address"]["port"] = int(host_port[1])
-                else:
-                    self.info["address"]["hostname"] = host_port[0]
-                    self.info["address"]["port"] = 5050
+                self.info["address"]["hostname"] = host_port[0]
+                self.info["address"]["port"] = 5050
 
-            log.debug("Found new leading Master, info={info}".format(info=self.info))
+        log.debug(
+            "Found new leading Master, info={info}".format(info=self.info))
 
-            if "hostname" in self.info["address"]:
-                host = self.info["address"]["hostname"]
-            elif "ip" in self.info["address"]:
-                host = self.info["address"]["ip"]
+        if "hostname" in self.info["address"]:
+            host = self.info["address"]["hostname"]
+        elif "ip" in self.info["address"]:
+            host = self.info["address"]["ip"]
 
-            port = self.info["address"]["port"]
+        port = self.info["address"]["port"]
 
-            raise gen.Return("http://{host}:{port}{path}".format(host=host, port=port,path=path))
-
+        raise gen.Return(
+            "http://{host}:{port}{path}".format(host=host, port=port, path=path))
 
 
 def drain(iterable):
