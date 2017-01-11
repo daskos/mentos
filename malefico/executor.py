@@ -8,18 +8,16 @@ from threading import Thread
 import time
 import uuid
 
-from malefico.subscriber import Subsc
+from malefico.subscription import Subscription,Event
 from malefico.utils import decode_data, encode_data, log_errors, parse_duration
 from tornado import gen
-from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-
+from toolz import merge
 log = logging.getLogger(__name__)
 
 
 class ExecutorDriver(Subscriber):
 
-    def __init__(self, executor, loop=None):
+    def __init__(self, executor,  handlers=None, loop=None):
         """
 
         Args:
@@ -27,9 +25,7 @@ class ExecutorDriver(Subscriber):
             loop ():
         """
 
-        self.agent_endpoint = "http://" + env['MESOS_AGENT_ENDPOINT']
-        super(ExecutorDriver, self).__init__(
-            leading_master=self.agent_endpoint, loop=loop)
+        self.master = env['MESOS_AGENT_ENDPOINT']
 
         self.framework_id = dict(value=env['MESOS_FRAMEWORK_ID'])
         self.executor_id = dict(value=env['MESOS_EXECUTOR_ID'])
@@ -50,76 +46,47 @@ class ExecutorDriver(Subscriber):
         self.updates = {}
 
         self.executor = executor
-        self.outbound_connection = AsyncHTTPClient(self.loop)
-        self._handlers = {
-            "SUBSCRIBED": self.on_subscribed,
-            "MESSAGE": self.on_message,
-            "LAUNCH": self.on_launch,
-            "LAUNCH_GROUP": self.on_launch_group,
-            "KILL": self.on_kill,
-            "ACKNOWLEDGED": self.on_acknowledged,
-            "SHUTDOWN": self.on_shutdown,
-            "ERROR": self.on_error,
-            "CLOSE": self.on_close
+        self.handlers = merge({
+            Event.SUBSCRIBED: self.on_subscribed,
+            Event.OFFERS: self.on_offers,
+            Event.RESCIND: self.on_rescind,
+            Event.UPDATE: self.on_update,
+            Event.MESSAGE: self.on_message,
+            Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
+            Event.FAILURE: self.on_failure,
+            Event.ERROR: self.on_error,
+            Event.HEARTBEAT: self.on_heartbeat
+        }, handlers or {})
+
+        'type': 'SUBSCRIBE',
+        'framework_id': self.framework_id,
+        'executor_id': self.executor_id,
+        'subscribe': {
+            'unacknowledged_tasks': list(self.tasks.values()),
+            'unacknowledged_updates': list(self.updates.values()),
         }
 
-    def gen_request(self, handler):
-        data = encode({
-            'type': 'SUBSCRIBE',
-            'framework_id': self.framework_id,
-            'executor_id': self.executor_id,
-            'subscribe': {
-                'unacknowledged_tasks': list(self.tasks.values()),
-                'unacknowledged_updates': list(self.updates.values()),
-            }
-        })
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Connection': 'close',
-            'Content-Length': str(len(data))
-        }
+        self.subscription = Subscription(self.framework, self.master, "/api/v1/executor", self.handlers,
+                                     loop=self.loop)
 
-        subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/executor",
-                                     method='POST',
-                                     headers=headers,
-                                     body=data,
-                                     streaming_callback=self._handlechunks,
-                                     header_callback=handler,
-                                     follow_redirects=False,
-                                     request_timeout=1e15)
-        return subscription_r
+    def start(self, block=False, **kwargs):
+        """ Start executor running in separate thread """
+        if hasattr(self, '_loop_thread'):
+            return
+        if not self.loop._running:
 
-    def _handle_outbound(self, response):
-        if response.code not in (200, 202):
-            log.error("Problem with request to  Executor for payload %s" %
-                      response.request.body)
-            log.error(response.body)
-            self.executor.on_outbound_error(self, response)
-        else:
-            self.executor.on_outbound_success(self, response)
-            log.warn("Succeed request to master %s" %
-                     response.request.body)
+            self._loop_thread = Thread(target=self.loop.start)
+            self._loop_thread.daemon = True
+            self._loop_thread.start()
+            while not self.loop._running:
+                sleep(0.001)
 
-    def _send(self, payload):
+        self.loop.add_callback(self.subscription.start)
+        if block:
+            self._loop_thread.join()
 
-        data = encode(payload)
-
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        if self.mesos_stream_id:
-            headers['Mesos-Stream-Id'] = self.mesos_stream_id
-
-        self.outbound_connection.fetch(
-            HTTPRequest(
-                url=self.leading_master + "/api/v1/executor",
-                body=data,
-                method='POST',
-                headers=headers,
-            ), self._handle_outbound
-        )
-
+    def stop(self):
+        raise NotImplementedError
 
     def update(self, status):
         """
@@ -221,23 +188,6 @@ class ExecutorDriver(Subscriber):
         self.executor.on_shutdown(self)
         self.stop()
 
-    @gen.coroutine
-    def _handle_events(self, message):
-        with log_errors():
-            try:
-                if message["type"] in self._handlers:
-                    _type = message['type']
-                    log.warn("Got event of type %s" % _type)
-                    if _type == "SHUTDOWN":
-                        self._handlers[_type]()
-                    else:
-                        self._handlers[_type](message[_type.lower()])
-
-                else:
-                    log.warn("Unhandled event %s" % message)
-            except Exception as ex:
-                log.warn("Problem dispatching event %s" % message)
-                log.exception(ex)
 
     def _delay_kill(self):
         def _():

@@ -10,13 +10,12 @@ sub = {
     "failover_timeout": 100000000,
     "hostname": socket.gethostname()
 }
-@gen.coroutine
 def handler(event):
     print(event)
 
 @gen.coroutine
 def b():
-    a = Subscription(sub,handler, master="zk://localhost:2181", api_path="/api/v1/scheduler", timeout=1,loop=ioloop.IOLoop.current())
+    a = Subscription(sub,"zk://localhost:2181","/api/v1/scheduler", timeout=1,loop=ioloop.IOLoop.current())
     yield a.start()
 
     try:

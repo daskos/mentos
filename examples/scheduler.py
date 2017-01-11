@@ -7,6 +7,7 @@ from malefico.interface import Scheduler
 from malefico.scheduler import SchedulerDriver
 from malefico.utils import encode_data
 
+from tornado import gen
 TASK_CPU = 0.2
 TASK_MEM = 128
 EXECUTOR_CPUS = 0.1
@@ -26,13 +27,15 @@ class WEEE(Scheduler):
         self.executor = executor
         self.one = False
 
+    @gen.coroutine
     def on_heartbeat(self, driver, message):
         pass
 
+    @gen.coroutine
     def on_offers(self, driver, offers):
 
         if self.one:
-            driver.decline([offer["id"] for offer in offers])
+            yield driver.decline([offer["id"] for offer in offers])
             return
         self.one = True
         filters = {'refuse_seconds': 5}
@@ -61,7 +64,7 @@ class WEEE(Scheduler):
                 ]
             }
 
-            driver.launch(offer["id"], [task], filters)
+            yield driver.launch(offer["id"], [task], filters)
 
     def on_outbound_error(self, driver, response):
         pass

@@ -15,7 +15,7 @@ from malefico.connection import Connection
 from tornado.httpclient import HTTPError
 from malefico.exceptions import MasterRedirect, BadSubscription, ConnectionLost, ConnectError, BadMessage,NoLeadingMaster
 
-MAX_WAIT_FOR_MASTER = 75
+
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ class Event(object):
     KILL = "KILL"
     LAUNCH_GROUP = "LAUNCH_GROUP"
     LAUNCH = "LAUNCH"
+    RESCIND_INVERSE_OFFER = "RESCIND_INVERSE_OFFER"
 
 
 class Message(object):
@@ -49,7 +50,7 @@ class Message(object):
     REQUEST = "REQUEST"
 
 class Subscription(object):
-    def __init__(self, framework, event_handler, master=None, api_path="/api/v1/scheduler", handlers={}, timeout=1,
+    def __init__(self, framework, uri, api_path, event_handlers =None, timeout=75,
                  retry_policy=RetryPolicy.forever(), loop=None):
 
         self.loop = loop or IOLoop.current()
@@ -63,17 +64,19 @@ class Subscription(object):
 
         self.api_path = api_path
 
-        self.event_handler = event_handler
+        self.event_handlers = event_handlers or {}
 
         self.buffer = deque()
 
         self.closing = False
 
-        self.master_uri = master
+        self.master_uri = uri
         self.master_info = MasterInfo(self.master_uri)
 
         self.mesos_stream_id = None
         self.framework = framework
+
+        self.timeout = timeout
 
 
     @gen.coroutine
@@ -118,15 +121,19 @@ class Subscription(object):
     def detect_master(self):
         conn = None
 
-        retry_policy = RetryPolicy.exponential_backoff(maximum=MAX_WAIT_FOR_MASTER)
+        retry_policy = RetryPolicy.exponential_backoff(maximum=self.timeout)
 
         while not conn:
             yield retry_policy.enforce()
+
 
             try:
                 endpoint = yield self.master_info.get_endpoint()
             except NoLeadingMaster as ex:
                 self.connection = None
+                endpoint = None
+
+            if not endpoint:
                 yield retry_policy.enforce()
 
             conn = yield self.make_connection(endpoint, self.api_path)
@@ -186,6 +193,8 @@ class Subscription(object):
             yield self.retry_policy.enforce(request)
             yield self.ensure_safe()
             try:
+                if "framework_id" not in request:
+                    request["framework_id"] = self.framework["id"]
                 response = yield self.connection.send(request)
                 self.retry_policy.clear(request)
             except ConnectError as ex:
@@ -199,11 +208,27 @@ class Subscription(object):
         raise gen.Return(response)
 
     @gen.coroutine
-    def _event_handler(self,msg):
-        #Add special check to intercept framework_id
-        if msg.get("type",None)==Event.SUBSCRIBED:
-            self.framework["id"] = msg["subscribed"]["framework_id"]
-        yield self.event_handler(msg)
+    def _event_handler(self,message):
+
+        try:
+            # Add special check to intercept framework_id
+            if message.get("type", None) == Event.SUBSCRIBED:
+                self.framework["id"] = message["subscribed"]["framework_id"]
+
+            if message["type"] in self.event_handlers:
+                _type = message['type']
+                log.debug("Got event of type %s from %s" % (_type,self.master_info.info))
+                if _type == Event.HEARTBEAT:
+                    yield self.event_handlers[_type](message)
+                elif _type == Event.SHUTDOWN:
+                    yield self.event_handlers[_type]()
+                else:
+                    yield self.event_handlers[_type](message[_type.lower()])
+            else:
+                log.warn("Unhandled event %s" % message)
+        except Exception as ex:
+            log.warn("Problem dispatching event %s" % message)
+            log.exception(ex)
 
     def close(self):
         self.closing = True
