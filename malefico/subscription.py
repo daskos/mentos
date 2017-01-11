@@ -34,6 +34,7 @@ class Event(object):
     LAUNCH_GROUP = "LAUNCH_GROUP"
     LAUNCH = "LAUNCH"
     RESCIND_INVERSE_OFFER = "RESCIND_INVERSE_OFFER"
+    CLOSE = "CLOSE"
 
 
 class Message(object):
@@ -74,7 +75,11 @@ class Subscription(object):
         self.master_info = MasterInfo(self.master_uri)
 
         self.mesos_stream_id = None
+
+        #TODO I dont like doing this
         self.framework = framework
+        self.tasks = None
+        self.updates =None
 
         self.timeout = timeout
 
@@ -149,15 +154,24 @@ class Subscription(object):
         try:
             self.state.transition_to(States.SUBSCRIBING)
             request = {
-                'type': 'SUBSCRIBE',
-                'subscribe': {
-                    'framework_info': self.framework
-                }
-            }
-            if "id" in self.framework:
-                request["framework_id"] = self.framework["id"]
+                      'type': 'SUBSCRIBE',
+                   'subscribe': {
+                       'framework_info': self.framework
+                   }
+               }
+            if "framework_id" in self.framework:
+                   request["framework_id"] = self.framework["framework_id"]
 
-            yield self.connection.connect( request)
+            if "executor_id" in self.framework:
+                request["executor_id"] = self.framework["executor_id"]
+
+            if self.tasks is not None:
+                request["subscribe"]["unacknowledged_tasks"] = list(self.tasks.values())
+
+            if self.updates is not None:
+                request["subscribe"]["unacknowledged_updates"] = list(self.updates.values())
+
+            yield self.connection.connect(request)
         except ConnectionLost as exc:
             log.warn("Lost connection to the Master, will try to resubscribe")
             self.connection.close()
@@ -194,7 +208,7 @@ class Subscription(object):
             yield self.ensure_safe()
             try:
                 if "framework_id" not in request:
-                    request["framework_id"] = self.framework["id"]
+                    request["framework_id"] = self.framework["framework_id"]
                 response = yield self.connection.send(request)
                 self.retry_policy.clear(request)
             except ConnectError as ex:
@@ -207,23 +221,23 @@ class Subscription(object):
 
         raise gen.Return(response)
 
-    @gen.coroutine
     def _event_handler(self,message):
 
         try:
             # Add special check to intercept framework_id
             if message.get("type", None) == Event.SUBSCRIBED:
-                self.framework["id"] = message["subscribed"]["framework_id"]
+                if "framework_id" in message["subscribed"]:
+                    self.framework["framework_id"] = message["subscribed"]["framework_id"]
 
             if message["type"] in self.event_handlers:
                 _type = message['type']
                 log.debug("Got event of type %s from %s" % (_type,self.master_info.info))
                 if _type == Event.HEARTBEAT:
-                    yield self.event_handlers[_type](message)
+                    self.event_handlers[_type](message)
                 elif _type == Event.SHUTDOWN:
-                    yield self.event_handlers[_type]()
+                    self.event_handlers[_type]()
                 else:
-                    yield self.event_handlers[_type](message[_type.lower()])
+                    self.event_handlers[_type](message[_type.lower()])
             else:
                 log.warn("Unhandled event %s" % message)
         except Exception as ex:
@@ -231,8 +245,12 @@ class Subscription(object):
             log.exception(ex)
 
     def close(self):
+        log.debug("Closing Subscription")
         self.closing = True
 
+        if self.master_info.detector:
+           log.warn("Closing Subscription Master Detector")
+           self.loop.add_callback(self.master_info.detector.close)
+        if self.connection:
+           self.connection.close()
         self.state.transition_to(States.CLOSED)
-
-        self.connection.close()

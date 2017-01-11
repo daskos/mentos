@@ -27,15 +27,15 @@ class WEEE(Scheduler):
         self.executor = executor
         self.one = False
 
-    @gen.coroutine
+
     def on_heartbeat(self, driver, message):
         pass
 
-    @gen.coroutine
+
     def on_offers(self, driver, offers):
 
         if self.one:
-            yield driver.decline([offer["id"] for offer in offers])
+            driver.decline([offer["id"] for offer in offers])
             return
         self.one = True
         filters = {'refuse_seconds': 5}
@@ -64,7 +64,7 @@ class WEEE(Scheduler):
                 ]
             }
 
-            yield driver.launch(offer["id"], [task], filters)
+            driver.launch(offer["id"], [task], filters)
 
     def on_outbound_error(self, driver, response):
         pass
@@ -92,11 +92,13 @@ executor = {
     ]
 
 }
-#
+import logging
+logging.getLogger().setLevel(logging.DEBUG)
 driver = SchedulerDriver(WEEE(executor), "Test", "arti",
                          master="zk://localhost:2181")
 
-driver.start(block=False)
+with driver:
+    while driver.loop._running:
+        time.sleep(0.1)
 
-while driver.loop._running:
-    time.sleep(0.1)
+

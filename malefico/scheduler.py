@@ -57,6 +57,7 @@ class SchedulerDriver(object):
 
     def start(self, block=False, **kwargs):
         """ Start scheduler running in separate thread """
+        log.debug("Starting scheduler")
         if hasattr(self, '_loop_thread'):
             return
         if not self.loop._running:
@@ -72,9 +73,14 @@ class SchedulerDriver(object):
             self._loop_thread.join()
 
     def stop(self):
-        raise NotImplementedError
+        """ stop
+        """
+        log.debug("Terminating Scheduler Driver")
+        self.subscription.close()
+        self.loop.add_callback(self.loop.stop)
+        while self.loop._running:
+            sleep(0.1)
 
-    @gen.coroutine
     def request(self, requests):
         """
         """
@@ -82,8 +88,8 @@ class SchedulerDriver(object):
             "type": "REQUEST",
             "requests": requests
         }
-        yield self.subscription.send(payload)
-        log.warn('Request resources from Mesos')
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Request resources from Mesos')
 
 
     def kill(self, task_id, agent_id):
@@ -100,10 +106,10 @@ class SchedulerDriver(object):
                 }
             }
         }
-        yield self.subscription.send(payload)
-        log.warn('Kills task {}'.format(task_id))
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Kills task {}'.format(task_id))
 
-    @gen.coroutine
+    
     def reconcile(self, task_id, agent_id):
         """
         """
@@ -129,13 +135,13 @@ class SchedulerDriver(object):
                 "type": "RECONCILE",
                 "reconcile": {"tasks": []}
             }
-            log.warn("Reconciling all tasks ")
+            log.debug("Reconciling all tasks ")
         if payload:
-            yield self.subscription.send(payload)
+            self.loop.add_callback(self.subscription.send,payload)
         else:
-            log.warn("Agent and Task not set")
+            log.debug("Agent and Task not set")
 
-    @gen.coroutine
+    
     def decline(self, offer_ids, filters=None):
         """
         """
@@ -151,10 +157,10 @@ class SchedulerDriver(object):
             "decline": decline
         }
 
-        yield self.subscription.send(payload)
-        log.warn('Declines offer {}'.format(offer_ids))
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Declines offer {}'.format(offer_ids))
 
-    @gen.coroutine
+    
     def launch(self, offer_ids, tasks, filters=None):
         if not tasks:
             return self.decline(offer_ids, filters=filters)
@@ -167,12 +173,14 @@ class SchedulerDriver(object):
         }]
         self.accept(offer_ids, operations, filters=filters)
 
-    @gen.coroutine
+        log.debug('Launching {} with filters '.format(operations,filters))
+
+
     def accept(self, offer_ids, operations, filters=None):
         """
         """
         if not operations:
-            yield self.decline(offer_ids, filters=filters)
+            self.decline(offer_ids, filters=filters)
         else:
             accept = {
                 "offer_ids": offer_ids,
@@ -187,10 +195,10 @@ class SchedulerDriver(object):
                 "type": "ACCEPT",
                 "accept": accept
             }
-            yield self.subscription.send(payload)
-            log.warn('Accepts offers {}'.format(offer_ids))
+            self.loop.add_callback(self.subscription.send,payload)
+            log.debug('Accepts offers {}'.format(offer_ids))
 
-    @gen.coroutine
+    
     def revive(self):
         """
         """
@@ -198,16 +206,16 @@ class SchedulerDriver(object):
 
             "type": "REVIVE"
         }
-        yield self.subscription.send(payload)
-        log.warn(
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug(
             'Revives; removes all filters previously set by framework')
 
-    @gen.coroutine
+    
     def acknowledge(self, status):
         """
         """
         if 'uuid' not in status:
-            log.debug(
+            log.warn(
                 "Did not get a UUID for %s" % status)
             return
 
@@ -220,10 +228,10 @@ class SchedulerDriver(object):
                 "uuid": status["uuid"]
             }
         }
-        yield self.subscription.send(payload)
-        log.warn('Acknowledges status update {}'.format(status))
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Acknowledges status update {}'.format(status))
 
-    @gen.coroutine
+    
     def message(self, executor_id, agent_id, message):
         """
         """
@@ -240,11 +248,11 @@ class SchedulerDriver(object):
                 "data": encode_data(message)
             }
         }
-        yield self.subscription.send(payload)
-        log.warn('Sends message `{}` to executor `{}` on agent `{}`'.format(
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Sends message `{}` to executor `{}` on agent `{}`'.format(
             message, executor_id, agent_id))
 
-    @gen.coroutine
+    
     def shutdown(self, agent_id, executor_Id):
         """
         """
@@ -260,10 +268,10 @@ class SchedulerDriver(object):
                 }
             }
         }
-        yield self.subscription.send(payload)
-        log.warn("Sent shutdown signal")
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug("Sent shutdown signal")
 
-    @gen.coroutine
+    
     def teardown(self, framework_id):
         """
         """
@@ -272,69 +280,78 @@ class SchedulerDriver(object):
             "type": "TEARDOWN"
         }
 
-        yield self.subscription.send(payload)
-        log.warn("Sent teardown signal")
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug("Sent teardown signal")
 
-    @gen.coroutine
+    
     def on_error(self, event):
         message = event['message']
-        yield self.scheduler.on_error(self, message)
+        self.scheduler.on_error(self, message)
+        log.debug("Got error %s"%event)
 
-    @gen.coroutine
+    
     def on_heartbeat(self, event):
-        yield self.scheduler.on_heartbeat(self, event)
+        self.scheduler.on_heartbeat(self, event)
+        log.debug("Got Heartbeat")
 
-    @gen.coroutine
+    
     def on_subscribed(self,info):
-        print(info)
-        yield self.scheduler.on_reregistered(
+        self.scheduler.on_reregistered(
             self, info["framework_id"], self.subscription.master_info.info)
 
-    @gen.coroutine
+        log.debug("Subscribed %s" % info)
+    
     def on_offers(self, event):
         offers = event['offers']
-        yield self.scheduler.on_offers(
+        self.scheduler.on_offers(
             self, offers
         )
+        log.debug("Got offers %s" % event)
 
-    @gen.coroutine
+    
     def on_rescind_inverse(self, event):
         offer_id = event['offer_id']
-        yield self.scheduler.on_rescind_inverse(self, offer_id)
+        self.scheduler.on_rescind_inverse(self, offer_id)
+        log.debug("Inverse rescind offer %s" % event)
 
-    @gen.coroutine
+    
     def on_rescind(self, event):
         offer_id = event['offer_id']
-        yield self.scheduler.on_rescinded(self, offer_id)
+        self.scheduler.on_rescinded(self, offer_id)
+        log.debug("Rescind offer %s" % event)
 
-    @gen.coroutine
+    
     def on_update(self, event):
         status = event['status']
-        yield self.scheduler.on_update(self, status)
+        self.scheduler.on_update(self, status)
         if self.implicit_acknowledgements:
             self.acknowledge(status)
+        log.debug("Got update %s" % event)
 
-    @gen.coroutine
+    
     def on_message(self, event):
         executor_id = event['executor_id']
         agent_id = event['agent_id']
         data = event['data']
-        yield self.scheduler.on_message(
+        self.scheduler.on_message(
             self, executor_id, agent_id, data
         )
+        log.debug("Got message %s" % event)
 
-    @gen.coroutine
+    
     def on_failure(self, event):
         agent_id = event['agent_id']
         if 'executor_id' not in event:
-            yield self.scheduler.on_agent_lost(self, agent_id)
+            self.scheduler.on_agent_lost(self, agent_id)
+            log.debug("Lost agent %s" % agent_id)
         else:
             executor_id = event['executor_id']
             status = event['status']
-            yield self.scheduler.on_executor_lost(
+            self.scheduler.on_executor_lost(
                 self, executor_id,
                 agent_id, status
             )
+        log.debug("Lost executor %s on agent %s" % (executor_id,agent_id))
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (
@@ -345,11 +362,14 @@ class SchedulerDriver(object):
 
     def __enter__(self):
         if not self.loop._running:
+            log.debug("Entering context manager")
             self.start(block=False)
         return self
 
     def __exit__(self, type, value, traceback):
+        log.debug("Exited context manager")
         self.stop()
 
     def __del__(self):
+        log.debug("Deleting scheduler")
         self.stop()

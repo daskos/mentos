@@ -107,6 +107,7 @@ class MasterInfo(object):
                 self.info = decode(data)
             else:
                 host_port = self.uri.split(":")
+                log.debug(host_port)
                 if len(host_port) == 2:
                     self.info["address"]["hostname"] = host_port[0]
                     self.info["address"]["port"] = int(host_port[1])

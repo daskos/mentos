@@ -7,15 +7,16 @@ import signal
 from threading import Thread
 import time
 import uuid
-
+from time import sleep
+from tornado.ioloop import IOLoop
 from malefico.subscription import Subscription,Event
+from malefico.exceptions import ExecutorException
 from malefico.utils import decode_data, encode_data, log_errors, parse_duration
-from tornado import gen
 from toolz import merge
 log = logging.getLogger(__name__)
 
 
-class ExecutorDriver(Subscriber):
+class ExecutorDriver():
 
     def __init__(self, executor,  handlers=None, loop=None):
         """
@@ -24,11 +25,19 @@ class ExecutorDriver(Subscriber):
             executor ():
             loop ():
         """
+        self.loop = loop or IOLoop()
+
 
         self.master = env['MESOS_AGENT_ENDPOINT']
+        log.debug("master is aaaaaaaaaaa %s" % self.master)
 
         self.framework_id = dict(value=env['MESOS_FRAMEWORK_ID'])
         self.executor_id = dict(value=env['MESOS_EXECUTOR_ID'])
+
+        self.framework = {
+            "framework_id":self.framework_id,
+            "executor_id":self.executor_id
+        }
 
         grace_shutdown_period = env.get('MESOS_EXECUTOR_SHUTDOWN_GRACE_PERIOD')
         if grace_shutdown_period:
@@ -42,32 +51,27 @@ class ExecutorDriver(Subscriber):
         self.executor = executor
         self.framework_info = None
         self.executor_info = None
-        self.tasks = {}
-        self.updates = {}
+
 
         self.executor = executor
         self.handlers = merge({
             Event.SUBSCRIBED: self.on_subscribed,
-            Event.OFFERS: self.on_offers,
-            Event.RESCIND: self.on_rescind,
-            Event.UPDATE: self.on_update,
+            Event.CLOSE: self.on_close,
             Event.MESSAGE: self.on_message,
-            Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
-            Event.FAILURE: self.on_failure,
             Event.ERROR: self.on_error,
-            Event.HEARTBEAT: self.on_heartbeat
+            Event.ACKNOWLEDGED:self.on_acknowledged,
+            Event.KILL:self.on_kill,
+            Event.LAUNCH_GROUP:self.on_launch_group,
+            Event.LAUNCH:self.on_launch,
+            Event.SHUTDOWN:self.on_shutdown
         }, handlers or {})
 
-        'type': 'SUBSCRIBE',
-        'framework_id': self.framework_id,
-        'executor_id': self.executor_id,
-        'subscribe': {
-            'unacknowledged_tasks': list(self.tasks.values()),
-            'unacknowledged_updates': list(self.updates.values()),
-        }
 
         self.subscription = Subscription(self.framework, self.master, "/api/v1/executor", self.handlers,
                                      loop=self.loop)
+
+        self.subscription.tasks = {}
+        self.subscription.updates = {}
 
     def start(self, block=False, **kwargs):
         """ Start executor running in separate thread """
@@ -86,7 +90,13 @@ class ExecutorDriver(Subscriber):
             self._loop_thread.join()
 
     def stop(self):
-        raise NotImplementedError
+        """ stop
+        """
+        log.debug("Terminating Scheduler Driver")
+        self.subscription.close()
+        self.loop.add_callback(self.loop.stop)
+        while self.loop._running:
+            sleep(0.1)
 
     def update(self, status):
         """
@@ -108,8 +118,8 @@ class ExecutorDriver(Subscriber):
                 "status": status
             }
         }
-        self.loop.add_callback(self._send, payload)
-        logging.info('Executor sends status update {} for task {}'.format(
+        self.loop.add_callback(self.subscription.send, payload)
+        logging.debug('Executor sends status update {} for task {}'.format(
             status["state"], status["task_id"]))
 
     def message(self, message):
@@ -123,15 +133,18 @@ class ExecutorDriver(Subscriber):
                 "data": encode_data(message)
             }
         }
-        self.loop.add_callback(self._send, payload)
-        logging.info('Driver sends framework message {}'.format(message))
+        self.loop.add_callback(self.subscription.send, payload)
+        logging.debug('Driver sends framework message {}'.format(message))
 
     def on_subscribed(self, info):
         executor_info = info['executor_info']
         framework_info = info['framework_info']
         agent_info = info['agent_info']
-        assert executor_info['executor_id'] == self.executor_id
-        assert framework_info['id'] == self.framework_id
+        if executor_info['executor_id'] != self.executor_id:
+            raise ExecutorException("Mismatched executor_id's")
+
+        if framework_info['id'] != self.framework_id:
+            raise ExecutorException("Mismatched framework_ids")
 
         if self.executor_info is None or self.framework_info is None:
             self.executor_info = executor_info
@@ -143,36 +156,48 @@ class ExecutorDriver(Subscriber):
         else:
             self.executor.on_reregistered(self, agent_info)
 
+        log.debug("Subscribed with info {}".format(info))
+
     def on_close(self):
         if not self.checkpoint:
             if not self.local:
                 self._delay_kill()
             self.executor.shutdown(self)
-            self.abort()
+
+        log.debug("Got close command")
 
     def on_launch_group(self, event):
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        assert task_id not in self.tasks
-        self.tasks[task_id] = task_info
+        if task_id  in self.subscription.tasks:
+            raise ExecutorException("Task Exists")
+        self.subscription.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
+        log.debug("Got launch group command {}".format(event))
 
     def on_launch(self, event):
+
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        assert task_id not in self.tasks
-        self.tasks[task_id] = task_info
+        if task_id  in self.subscription.tasks:
+            raise ExecutorException("Task Exists")
+        self.subscription.tasks[task_id] = task_info
+
+        log.debug("Launching %s", event)
         self.executor.on_launch(self, task_info)
+        log.debug("Got launch command {}".format(event))
 
     def on_kill(self, event):
         task_id = event['task_id']
         self.executor.on_kill(self, task_id)
+        log.debug("Got kill command {}".format(event))
 
     def on_acknowledged(self, event):
         task_id = event['task_id']['value']
         uuid_ = uuid.UUID(bytes=decode_data(event['uuid']))
-        self.updates.pop(uuid_, None)
-        self.tasks.pop(task_id, None)
+        self.subscription.updates.pop(uuid_, None)
+        self.subscription.tasks.pop(task_id, None)
+        log.debug("Got acknowledge {}".format(event))
 
     def on_message(self, event):
         data = event['data']
@@ -181,12 +206,15 @@ class ExecutorDriver(Subscriber):
     def on_error(self, event):
         message = event['message']
         self.executor.on_error(self, message)
+        log.debug("Got error {}".format(event))
 
     def on_shutdown(self):
         if not self.local:
             self._delay_kill()
         self.executor.on_shutdown(self)
+        log.debug("Got Shutdown command")
         self.stop()
+
 
 
     def _delay_kill(self):

@@ -135,11 +135,11 @@ class Connection(object):
             raise ex
 
 
-    @gen.coroutine
     def _handle_chunks(self, chunk):
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:
+                log.debug("Buffer length %s" % len(self.buffer))
                 # TODO Ehm What ?
                 if b"Failed to" in chunk:
                     log.warn("Got error from Master: %s" % chunk.decode())
@@ -172,8 +172,8 @@ class Connection(object):
                     self.buffer.appendleft(length)
 
                 msg = decode(b''.join(msgs))
-                log.debug("Buffer length %s" % len(self.buffer))
-                yield self.event_handler(msg)
+
+                self.event_handler(msg)
 
                 # yield self.(msg)
             except Exception as ex:
@@ -183,6 +183,8 @@ class Connection(object):
     def close(self):
         if self.closing:
             return
+
+
 
         self.closing = True
         self.subscription_client.close()

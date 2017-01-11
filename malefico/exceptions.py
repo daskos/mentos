@@ -33,3 +33,8 @@ class BadMessage(MesosError):
     pass
 
 
+
+class ExecutorException(MesosError):
+    pass
+
+
