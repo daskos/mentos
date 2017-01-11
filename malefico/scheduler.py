@@ -4,31 +4,27 @@ import getpass
 import logging
 import os
 import socket
+from threading import Thread
+from time import sleep
 
-import six
-
-from malefico.subscriber import Subscriber
-from malefico.utils import (
-    encode_data, get_http_master_url, get_master, log_errors, master_info)
+from toolz import merge
 from tornado import gen
-from tornado.escape import json_decode as decode
-from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
-from zoonado import Zoonado
-from zoonado.exc import ConnectionLoss, NoNode
+from tornado.ioloop import IOLoop
+
+from malefico.subscription import Subscription, Event
+from malefico.utils import encode_data
 
 log = logging.getLogger(__name__)
 
 
-class SchedulerDriver(Subscriber):
-
+class SchedulerDriver(object):
     def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost",
-                 failover_timeout=100, capabilities=[],
-                 implicit_acknowledgements=True, loop=None):
+                 failover_timeout=100, capabilities=None,
+                 implicit_acknowledgements=True, handlers=None, loop=None):
 
-        super(SchedulerDriver, self).__init__(loop=loop)
+        self.loop = loop or IOLoop()
+
         self.master = master
-
         self.leading_master_seq = None
         self.leading_master_info = None
 
@@ -36,72 +32,70 @@ class SchedulerDriver(Subscriber):
         self.framework = {
             "user": user,
             "name": name,
-            "capabilities": capabilities,
+            "capabilities": capabilities or [],
             "failover_timeout": failover_timeout,
             "hostname": socket.gethostname()
         }
 
         self.implicit_acknowledgements = implicit_acknowledgements
 
-        self.outbound_connection = AsyncHTTPClient(self.loop)
+        self.handlers = merge({
+            Event.SUBSCRIBED: self.on_subscribed,
+            Event.OFFERS: self.on_offers,
+            Event.RESCIND: self.on_rescind,
+            Event.UPDATE: self.on_update,
+            Event.MESSAGE: self.on_message,
+            Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
+            Event.FAILURE: self.on_failure,
+            Event.ERROR: self.on_error,
+            Event.HEARTBEAT: self.on_heartbeat
+        }, handlers or {})
 
-        self._handlers = {
-            "SUBSCRIBED": self.on_subscribed,
-            "OFFERS": self.on_offers,
-            "RESCIND": self.on_rescind,
-            "UPDATE": self.on_update,
-            "MESSAGE": self.on_message,
-            "RESCIND_INVERSE_OFFER": self.on_rescind_inverse,
-            "FAILURE": self.on_failure,
-            "ERROR": self.on_error,
-            "HEARTBEAT": self.on_heartbeat
-        }
+        self.subscription = Subscription(self.framework, self.master, "/api/v1/scheduler", self.handlers,
+                                         timeout=failover_timeout,
+                                         loop=self.loop)
 
-    def _handle_outbound(self, response):
-        if response.code not in (200, 202):
-            log.error("Problem with request to  Master for payload %s" %
-                      response.request.body)
-            log.error(response.body)
-            self.scheduler.on_outbound_error(self, response)
-        else:
-            self.scheduler.on_outbound_success(self, response)
-            log.debug("Succeed request to master %s" %
-                      response.request.body)
+    def start(self, block=False, **kwargs):
+        """ Start scheduler running in separate thread """
+        log.debug("Starting scheduler")
+        if hasattr(self, '_loop_thread'):
+            return
+        if not self.loop._running:
 
-    def _send(self, payload):
+            self._loop_thread = Thread(target=self.loop.start)
+            self._loop_thread.daemon = True
+            self._loop_thread.start()
+            while not self.loop._running:
+                sleep(0.001)
 
-        data = encode(payload)
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        if self.mesos_stream_id:
-            headers['Mesos-Stream-Id'] = self.mesos_stream_id
+        self.loop.add_callback(self.subscription.start)
+        if block:
+            self._loop_thread.join()
 
-        self.outbound_connection.fetch(
-            HTTPRequest(
-                url=self.leading_master + "/api/v1/scheduler",
-                body=data,
-                method='POST',
-                headers=headers,
-            ), self._handle_outbound
-        )
+    def stop(self):
+        """ stop
+        """
+        log.debug("Terminating Scheduler Driver")
+        self.subscription.close()
+        self.loop.add_callback(self.loop.stop)
+        while self.loop._running:
+            sleep(0.1)
 
     def request(self, requests):
         """
         """
         payload = {
-            "framework_id": self.framework_id,
             "type": "REQUEST",
             "requests": requests
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Request resources from Mesos')
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Request resources from Mesos')
+
 
     def kill(self, task_id, agent_id):
-        """
-        """
+
         payload = {
-            "framework_id": self.framework_id,
+
             "type": "KILL",
             "kill": {
                 "task_id": {
@@ -112,16 +106,15 @@ class SchedulerDriver(Subscriber):
                 }
             }
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Kills task {}'.format(task_id))
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Kills task {}'.format(task_id))
 
+    
     def reconcile(self, task_id, agent_id):
         """
         """
-        payload = {}
         if task_id and agent_id:
             payload = {
-                 "framework_id": self.framework_id,
                 "type": "RECONCILE",
                 "reconcile": {
                     "tasks": [{
@@ -138,16 +131,17 @@ class SchedulerDriver(Subscriber):
 
         else:
             payload = {
-                "framework_id": self.framework_id,
+
                 "type": "RECONCILE",
                 "reconcile": {"tasks": []}
             }
-            log.warn("Reconciling all tasks ")
+            log.debug("Reconciling all tasks ")
         if payload:
-            self.loop.add_callback(self._send, payload)
+            self.loop.add_callback(self.subscription.send,payload)
         else:
-            log.warn("Agent and Task not set")
+            log.debug("Agent and Task not set")
 
+    
     def decline(self, offer_ids, filters=None):
         """
         """
@@ -159,13 +153,14 @@ class SchedulerDriver(Subscriber):
             decline['filters'] = filters
 
         payload = {
-            "framework_id": self.framework_id,
             "type": "DECLINE",
             "decline": decline
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Declines offer {}'.format(offer_ids))
 
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Declines offer {}'.format(offer_ids))
+
+    
     def launch(self, offer_ids, tasks, filters=None):
         if not tasks:
             return self.decline(offer_ids, filters=filters)
@@ -176,52 +171,56 @@ class SchedulerDriver(Subscriber):
                 'task_infos': tasks
             }
         }]
-
         self.accept(offer_ids, operations, filters=filters)
+
+        log.debug('Launching {} with filters '.format(operations,filters))
+
 
     def accept(self, offer_ids, operations, filters=None):
         """
         """
         if not operations:
-            return self.decline(offer_ids, filters=filters)
+            self.decline(offer_ids, filters=filters)
+        else:
+            accept = {
+                "offer_ids": offer_ids,
+                "operations": operations
+            }
 
-        accept = {
-            "offer_ids": offer_ids,
-            "operations": operations
-        }
+            if filters is not None:
+                accept['filters'] = filters
 
-        if filters is not None:
-            accept['filters'] = filters
+            payload = {
 
-        payload = {
-            "framework_id": self.framework_id,
-            "type": "ACCEPT",
-            "accept": accept
-        }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Accepts offers {}'.format(offer_ids))
+                "type": "ACCEPT",
+                "accept": accept
+            }
+            self.loop.add_callback(self.subscription.send,payload)
+            log.debug('Accepts offers {}'.format(offer_ids))
 
+    
     def revive(self):
         """
         """
         payload = {
-             "framework_id": self.framework_id,
+
             "type": "REVIVE"
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn(
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug(
             'Revives; removes all filters previously set by framework')
 
+    
     def acknowledge(self, status):
         """
         """
         if 'uuid' not in status:
-            log.debug(
+            log.warn(
                 "Did not get a UUID for %s" % status)
             return
 
         payload = {
-            "framework_id": self.framework_id,
+
             "type": "ACKNOWLEDGE",
             "acknowledge": {
                 "agent_id": status["agent_id"],
@@ -229,14 +228,15 @@ class SchedulerDriver(Subscriber):
                 "uuid": status["uuid"]
             }
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Acknowledges status update {}'.format(status))
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Acknowledges status update {}'.format(status))
 
+    
     def message(self, executor_id, agent_id, message):
         """
         """
         payload = {
-            "framework_id": self.framework_id,
+
             "type": "MESSAGE",
             "message": {
                 "agent_id": {
@@ -248,15 +248,16 @@ class SchedulerDriver(Subscriber):
                 "data": encode_data(message)
             }
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn('Sends message `{}` to executor `{}` on agent `{}`'.format(
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug('Sends message `{}` to executor `{}` on agent `{}`'.format(
             message, executor_id, agent_id))
 
+    
     def shutdown(self, agent_id, executor_Id):
         """
         """
         payload = {
-            "framework_id": self.framework_id,
+
             "type": "SHUTDOWN",
             "kill": {
                 "executor_id": {
@@ -267,61 +268,67 @@ class SchedulerDriver(Subscriber):
                 }
             }
         }
-        self.loop.add_callback(self._send, payload)
-        log.warn("Sent shutdown signal")
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug("Sent shutdown signal")
 
+    
     def teardown(self, framework_id):
         """
         """
         payload = {
-            "framework_id": self.framework_id,
+
             "type": "TEARDOWN"
         }
 
-        self.loop.add_callback(self._send, payload)
-        log.warn("Sent teardown signal")
+        self.loop.add_callback(self.subscription.send,payload)
+        log.debug("Sent teardown signal")
 
+    
     def on_error(self, event):
         message = event['message']
         self.scheduler.on_error(self, message)
+        log.debug("Got error %s"%event)
 
+    
     def on_heartbeat(self, event):
-        log.debug("Got heartbeat")
-        message = "Heartbeat"
-        self.scheduler.on_heartbeat(self, message)
+        self.scheduler.on_heartbeat(self, event)
+        log.debug("Got Heartbeat")
 
-    def on_subscribed(self, info):
+    
+    def on_subscribed(self,info):
+        self.scheduler.on_reregistered(
+            self, info["framework_id"], self.subscription.master_info.info)
 
-        if self.framework_id:
-            self.scheduler.on_reregistered(
-                self, self.framework_id, self.leading_master)
-        else:
-            self.framework_id = info["framework_id"]
-            self.scheduler.on_registered(
-                self, self.framework_id,
-                self.leading_master
-            )
-
+        log.debug("Subscribed %s" % info)
+    
     def on_offers(self, event):
         offers = event['offers']
         self.scheduler.on_offers(
             self, offers
         )
+        log.debug("Got offers %s" % event)
 
+    
     def on_rescind_inverse(self, event):
         offer_id = event['offer_id']
         self.scheduler.on_rescind_inverse(self, offer_id)
+        log.debug("Inverse rescind offer %s" % event)
 
+    
     def on_rescind(self, event):
         offer_id = event['offer_id']
         self.scheduler.on_rescinded(self, offer_id)
+        log.debug("Rescind offer %s" % event)
 
+    
     def on_update(self, event):
         status = event['status']
         self.scheduler.on_update(self, status)
         if self.implicit_acknowledgements:
             self.acknowledge(status)
+        log.debug("Got update %s" % event)
 
+    
     def on_message(self, event):
         executor_id = event['executor_id']
         agent_id = event['agent_id']
@@ -329,11 +336,14 @@ class SchedulerDriver(Subscriber):
         self.scheduler.on_message(
             self, executor_id, agent_id, data
         )
+        log.debug("Got message %s" % event)
 
+    
     def on_failure(self, event):
         agent_id = event['agent_id']
         if 'executor_id' not in event:
             self.scheduler.on_agent_lost(self, agent_id)
+            log.debug("Lost agent %s" % agent_id)
         else:
             executor_id = event['executor_id']
             status = event['status']
@@ -341,153 +351,25 @@ class SchedulerDriver(Subscriber):
                 self, executor_id,
                 agent_id, status
             )
-
-    @gen.coroutine
-    def _handle_events(self, message):
-        with log_errors():
-            try:
-                if message["type"] in self._handlers:
-                    _type = message['type']
-                    log.warn("Got event of type %s" % _type)
-                    if _type == "HEARTBEAT":
-                        self._handlers[_type](message)
-                    else:
-                        self._handlers[_type](message[_type.lower()])
-
-                else:
-                    log.warn("Unhandled event %s" % message)
-            except Exception as ex:
-                log.warn("Problem dispatching event %s" % message)
-                log.exception(ex)
-
-    def gen_request(self, handler):
-        data = encode({
-            'type': 'SUBSCRIBE',
-            'subscribe': {
-                'framework_info': self.framework
-            }
-        })
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Connection': 'close',
-            'Content-Length': str(len(data))
-        }
-        subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/scheduler",
-                                     method='POST',
-                                     headers=headers,
-                                     body=data,
-                                     streaming_callback=self._handlechunks,
-                                     header_callback=handler,
-                                     follow_redirects=False,
-                                     request_timeout=1e15)
-        return subscription_r
-
-    @gen.coroutine
-    def _detect_master(self, timeout=5):
-        with log_errors():
-            try:
-                if  self.status not in ("disconnected", "closed"):
-                    yield gen.sleep(timeout)
-
-                if "zk://" in self.master:
-                    log.warn("Using Zookeeper for discovery")
-                    quorum = ",".join([zoo[zoo.index('://') + 3:]
-                                       for zoo in self.master.split(",")])
-                    self.detector = Zoonado(quorum)
-                    try:
-                        yield self.detector.start()
-
-                        @gen.coroutine
-                        def children_changed(children):
-                            yield gen.sleep(timeout)
-                            current_state = yield self.detector.get_children("/mesos")
-                            seq = get_master(current_state)
-                            if seq == self.leading_master_seq and self.status == "disconnected":
-                                log.warn(
-                                    "Master did not change, maybe just starting up, will watch for changes")
-                                yield gen.sleep(timeout)
-                            elif seq == -1:
-                                log.warn(
-                                    "No master detected, will watch for changes")
-                                log.warn("Waiting for %d" % timeout)
-                                self.leading_master = None
-                                yield gen.sleep(timeout)
-                            elif self.status in ("disconnected", "closed"):
-                                log.warn("New master detected at %s" %
-                                         self.leading_master)
-                                self.leading_master_seq = seq
-                                try:
-                                    data = yield self.detector.get_data('/mesos/' + seq)
-                                    self.leading_master_info = decode(
-                                        data)
-                                    self.leading_master = get_http_master_url(
-                                        self.leading_master_info)
-                                except NoNode:
-                                    log.warn(
-                                        "Problem fetching Master node from zookeeper")
-
-                        watcher = self.detector.recipes.ChildrenWatcher()
-                        watcher.add_callback(
-                            '/mesos', children_changed)
-                        children = yield self.detector.get_children('/mesos')
-                        yield children_changed(children)
-                    except ConnectionLoss:
-                        pass
-                    except Exception as ex:
-                        log.error("Unhandled exception in Detector")
-                        yield self.detector.close()
-                else:
-                    # Two implementations are possible follow the 307 or do
-                    # not, following has the advantage of getting more info
-                    def get_actual_master(response):
-                        if response.code == 307:
-                            actual_master = six.moves.urllib.parse.urlparse(
-                                response.headers["location"])
-                            self.leading_master_info = master_info(
-                                actual_master.netloc)
-                            self.leading_master = get_http_master_url(
-                                self.leading_master_info)
-                            log.warn("New master detected at %s" %
-                                     self.leading_master)
-                        elif response.code in (200, 202):
-                            self.leading_master_info = master_info(
-                                self.master)
-                            self.leading_master = get_http_master_url(
-                                self.leading_master_info)
-                            log.warn("New master detected at %s" %
-                                     self.leading_master)
-
-                    potential_master = get_http_master_url(
-                        master_info(self.master))
-                    check_master_r = HTTPRequest(url=potential_master + "/state",
-                                                 method='GET',
-                                                 headers={
-                                                     'content-type': 'application/json',
-                                                     'accept': 'application/json',
-                                                     'connection': 'close',
-                                                 },
-                                                 follow_redirects=False)
-
-                    http_client = AsyncHTTPClient()
-                    yield http_client.fetch(check_master_r, get_actual_master)
-
-            except HTTPError as ex:
-                if ex.code == "307":
-                    pass
-                else:
-                    log.warn(
-                        "Problem resolving Master. Will retry.")
-                    log.warn("Waiting for %d" % timeout)
-                    yield gen.sleep(timeout)
-                    yield self._detect_master(timeout)
-            except Exception as ex:
-                log.error("Unhandeled exception")
-                log.exception(ex)
+        log.debug("Lost executor %s on agent %s" % (executor_id,agent_id))
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (
             self.__class__.__name__, self.master,
-            self.leading_master, self.framework)
+            self.subscription.master_info.info, self.framework)
 
     __repr__ = __str__
+
+    def __enter__(self):
+        if not self.loop._running:
+            log.debug("Entering context manager")
+            self.start(block=False)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        log.debug("Exited context manager")
+        self.stop()
+
+    def __del__(self):
+        log.debug("Deleting scheduler")
+        self.stop()

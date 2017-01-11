@@ -7,32 +7,37 @@ import signal
 from threading import Thread
 import time
 import uuid
-
-from malefico.subscriber import Subscriber
+from time import sleep
+from tornado.ioloop import IOLoop
+from malefico.subscription import Subscription,Event
+from malefico.exceptions import ExecutorException
 from malefico.utils import decode_data, encode_data, log_errors, parse_duration
-from tornado import gen
-from tornado.escape import json_encode as encode
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-
+from toolz import merge
 log = logging.getLogger(__name__)
 
 
-class ExecutorDriver(Subscriber):
+class ExecutorDriver():
 
-    def __init__(self, executor, loop=None):
+    def __init__(self, executor,  handlers=None, loop=None):
         """
 
         Args:
             executor ():
             loop ():
         """
+        self.loop = loop or IOLoop()
 
-        self.agent_endpoint = "http://" + env['MESOS_AGENT_ENDPOINT']
-        super(ExecutorDriver, self).__init__(
-            leading_master=self.agent_endpoint, loop=loop)
+
+        self.master = env['MESOS_AGENT_ENDPOINT']
+        log.debug("master is aaaaaaaaaaa %s" % self.master)
 
         self.framework_id = dict(value=env['MESOS_FRAMEWORK_ID'])
         self.executor_id = dict(value=env['MESOS_EXECUTOR_ID'])
+
+        self.framework = {
+            "framework_id":self.framework_id,
+            "executor_id":self.executor_id
+        }
 
         grace_shutdown_period = env.get('MESOS_EXECUTOR_SHUTDOWN_GRACE_PERIOD')
         if grace_shutdown_period:
@@ -46,79 +51,52 @@ class ExecutorDriver(Subscriber):
         self.executor = executor
         self.framework_info = None
         self.executor_info = None
-        self.tasks = {}
-        self.updates = {}
+
 
         self.executor = executor
-        self.outbound_connection = AsyncHTTPClient(self.loop)
-        self._handlers = {
-            "SUBSCRIBED": self.on_subscribed,
-            "MESSAGE": self.on_message,
-            "LAUNCH": self.on_launch,
-            "LAUNCH_GROUP": self.on_launch_group,
-            "KILL": self.on_kill,
-            "ACKNOWLEDGED": self.on_acknowledged,
-            "SHUTDOWN": self.on_shutdown,
-            "ERROR": self.on_error,
-            "CLOSE": self.on_close
-        }
+        self.handlers = merge({
+            Event.SUBSCRIBED: self.on_subscribed,
+            Event.CLOSE: self.on_close,
+            Event.MESSAGE: self.on_message,
+            Event.ERROR: self.on_error,
+            Event.ACKNOWLEDGED:self.on_acknowledged,
+            Event.KILL:self.on_kill,
+            Event.LAUNCH_GROUP:self.on_launch_group,
+            Event.LAUNCH:self.on_launch,
+            Event.SHUTDOWN:self.on_shutdown
+        }, handlers or {})
 
-    def gen_request(self, handler):
-        data = encode({
-            'type': 'SUBSCRIBE',
-            'framework_id': self.framework_id,
-            'executor_id': self.executor_id,
-            'subscribe': {
-                'unacknowledged_tasks': list(self.tasks.values()),
-                'unacknowledged_updates': list(self.updates.values()),
-            }
-        })
-        headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Connection': 'close',
-            'Content-Length': str(len(data))
-        }
 
-        subscription_r = HTTPRequest(url=self.leading_master + "/api/v1/executor",
-                                     method='POST',
-                                     headers=headers,
-                                     body=data,
-                                     streaming_callback=self._handlechunks,
-                                     header_callback=handler,
-                                     follow_redirects=False,
-                                     request_timeout=1e15)
-        return subscription_r
+        self.subscription = Subscription(self.framework, self.master, "/api/v1/executor", self.handlers,
+                                     loop=self.loop)
 
-    def _handle_outbound(self, response):
-        if response.code not in (200, 202):
-            log.error("Problem with request to  Executor for payload %s" %
-                      response.request.body)
-            log.error(response.body)
-            self.executor.on_outbound_error(self, response)
-        else:
-            self.executor.on_outbound_success(self, response)
-            log.warn("Succeed request to master %s" %
-                     response.request.body)
+        self.subscription.tasks = {}
+        self.subscription.updates = {}
 
-    def _send(self, payload):
+    def start(self, block=False, **kwargs):
+        """ Start executor running in separate thread """
+        if hasattr(self, '_loop_thread'):
+            return
+        if not self.loop._running:
 
-        data = encode(payload)
+            self._loop_thread = Thread(target=self.loop.start)
+            self._loop_thread.daemon = True
+            self._loop_thread.start()
+            while not self.loop._running:
+                sleep(0.001)
 
-        headers = {
-            'Content-Type': 'application/json'
-        }
-        if self.mesos_stream_id:
-            headers['Mesos-Stream-Id'] = self.mesos_stream_id
+        self.loop.add_callback(self.subscription.start)
+        if block:
+            self._loop_thread.join()
 
-        self.outbound_connection.fetch(
-            HTTPRequest(
-                url=self.leading_master + "/api/v1/executor",
-                body=data,
-                method='POST',
-                headers=headers,
-            ), self._handle_outbound
-        )
+    def stop(self):
+        """ stop
+        """
+        log.debug("Terminating Scheduler Driver")
+        self.subscription.close()
+        self.loop.add_callback(self.loop.stop)
+        while self.loop._running:
+            sleep(0.1)
 
     def update(self, status):
         """
@@ -140,8 +118,8 @@ class ExecutorDriver(Subscriber):
                 "status": status
             }
         }
-        self.loop.add_callback(self._send, payload)
-        logging.info('Executor sends status update {} for task {}'.format(
+        self.loop.add_callback(self.subscription.send, payload)
+        logging.debug('Executor sends status update {} for task {}'.format(
             status["state"], status["task_id"]))
 
     def message(self, message):
@@ -155,15 +133,18 @@ class ExecutorDriver(Subscriber):
                 "data": encode_data(message)
             }
         }
-        self.loop.add_callback(self._send, payload)
-        logging.info('Driver sends framework message {}'.format(message))
+        self.loop.add_callback(self.subscription.send, payload)
+        logging.debug('Driver sends framework message {}'.format(message))
 
     def on_subscribed(self, info):
         executor_info = info['executor_info']
         framework_info = info['framework_info']
         agent_info = info['agent_info']
-        assert executor_info['executor_id'] == self.executor_id
-        assert framework_info['id'] == self.framework_id
+        if executor_info['executor_id'] != self.executor_id:
+            raise ExecutorException("Mismatched executor_id's")
+
+        if framework_info['id'] != self.framework_id:
+            raise ExecutorException("Mismatched framework_ids")
 
         if self.executor_info is None or self.framework_info is None:
             self.executor_info = executor_info
@@ -175,36 +156,48 @@ class ExecutorDriver(Subscriber):
         else:
             self.executor.on_reregistered(self, agent_info)
 
+        log.debug("Subscribed with info {}".format(info))
+
     def on_close(self):
         if not self.checkpoint:
             if not self.local:
                 self._delay_kill()
             self.executor.shutdown(self)
-            self.abort()
+
+        log.debug("Got close command")
 
     def on_launch_group(self, event):
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        assert task_id not in self.tasks
-        self.tasks[task_id] = task_info
+        if task_id  in self.subscription.tasks:
+            raise ExecutorException("Task Exists")
+        self.subscription.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
+        log.debug("Got launch group command {}".format(event))
 
     def on_launch(self, event):
+
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        assert task_id not in self.tasks
-        self.tasks[task_id] = task_info
+        if task_id  in self.subscription.tasks:
+            raise ExecutorException("Task Exists")
+        self.subscription.tasks[task_id] = task_info
+
+        log.debug("Launching %s", event)
         self.executor.on_launch(self, task_info)
+        log.debug("Got launch command {}".format(event))
 
     def on_kill(self, event):
         task_id = event['task_id']
         self.executor.on_kill(self, task_id)
+        log.debug("Got kill command {}".format(event))
 
     def on_acknowledged(self, event):
         task_id = event['task_id']['value']
         uuid_ = uuid.UUID(bytes=decode_data(event['uuid']))
-        self.updates.pop(uuid_, None)
-        self.tasks.pop(task_id, None)
+        self.subscription.updates.pop(uuid_, None)
+        self.subscription.tasks.pop(task_id, None)
+        log.debug("Got acknowledge {}".format(event))
 
     def on_message(self, event):
         data = event['data']
@@ -213,30 +206,16 @@ class ExecutorDriver(Subscriber):
     def on_error(self, event):
         message = event['message']
         self.executor.on_error(self, message)
+        log.debug("Got error {}".format(event))
 
     def on_shutdown(self):
         if not self.local:
             self._delay_kill()
         self.executor.on_shutdown(self)
+        log.debug("Got Shutdown command")
         self.stop()
 
-    @gen.coroutine
-    def _handle_events(self, message):
-        with log_errors():
-            try:
-                if message["type"] in self._handlers:
-                    _type = message['type']
-                    log.warn("Got event of type %s" % _type)
-                    if _type == "SHUTDOWN":
-                        self._handlers[_type]()
-                    else:
-                        self._handlers[_type](message[_type.lower()])
 
-                else:
-                    log.warn("Unhandled event %s" % message)
-            except Exception as ex:
-                log.warn("Problem dispatching event %s" % message)
-                log.exception(ex)
 
     def _delay_kill(self):
         def _():

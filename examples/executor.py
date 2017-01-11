@@ -3,15 +3,17 @@ from __future__ import print_function
 import sys
 from threading import Thread
 import time
-
+import logging
 from malefico.executor import ExecutorDriver
 from malefico.interface import Executor
 from malefico.utils import decode_data
 
+log = logging.getLogger(__name__)
 
 class MinimalExecutor(Executor):
 
     def on_launch(self, driver, task):
+
         def run_task(task):
             update = {
                 "task_id": {
@@ -20,6 +22,7 @@ class MinimalExecutor(Executor):
                 "state": 'TASK_RUNNING',
                 "timestamp":  int(time.time())
             }
+
             driver.update(update)
 
             print(decode_data(task["data"]), file=sys.stderr)
@@ -43,6 +46,8 @@ class MinimalExecutor(Executor):
 if __name__ == '__main__':
     import logging
     logging.basicConfig(level=logging.DEBUG)
+    import time
+    #time.sleep(10)
     # debug
     driver = ExecutorDriver(MinimalExecutor())
     driver.start(block=True)
