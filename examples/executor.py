@@ -5,9 +5,9 @@ import sys
 from threading import Thread
 import time
 
-from malefico.executor import ExecutorDriver
-from malefico.interface import Executor
-from malefico.utils import decode_data
+from mentos.executor import ExecutorDriver
+from mentos.interface import Executor
+from mentos.utils import decode_data
 
 log = logging.getLogger(__name__)
 

@@ -4,7 +4,7 @@ import collections
 import logging
 import time
 
-from malefico.exceptions import FailedRetry
+from mentos.exceptions import FailedRetry
 from tornado import gen
 
 log = logging.getLogger(__name__)

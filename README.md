@@ -1,11 +1,11 @@
 
-# Malefico - A Python implementation  of a Mesos Scheduler/Executor driver
+# mentos - A Python implementation  of a Mesos Scheduler/Executor driver
 ###### dangerous
 
 The main goal is to provide a low-complexity and feature rich support for pure python Mesos Frameworks, but also to learn things.
 
 ## There be dragons
-Malefico is quite experimental right now. It currently uses Tornado as the networking engine, but this might change in later release.  So the API might break.
+mentos is quite experimental right now. It currently uses Tornado as the networking engine, but this might change in later release.  So the API might break.
 
 This is mostly a learning project right now, but seems to work ok.
 

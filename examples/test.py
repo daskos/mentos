@@ -1,4 +1,4 @@
-from malefico.subscription import Subscription
+from mentos.subscription import Subscription
 
 from tornado import gen, ioloop
 import socket

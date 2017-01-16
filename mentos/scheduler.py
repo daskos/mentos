@@ -7,8 +7,8 @@ import socket
 from threading import Thread
 from time import sleep
 
-from malefico.subscription import Event, Subscription
-from malefico.utils import encode_data
+from mentos.subscription import Event, Subscription
+from mentos.utils import encode_data
 from toolz import merge
 from tornado.ioloop import IOLoop
 

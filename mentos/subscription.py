@@ -3,15 +3,15 @@ from __future__ import absolute_import, division, print_function
 from collections import deque
 import logging
 
-from malefico.utils import log_errors, MasterInfo
+from mentos.utils import log_errors, MasterInfo
 from tornado import gen
 
 from tornado.ioloop import IOLoop, PeriodicCallback
-from malefico.states import SessionStateMachine, States
-from malefico.retry import RetryPolicy
-from malefico.connection import Connection
+from mentos.states import SessionStateMachine, States
+from mentos.retry import RetryPolicy
+from mentos.connection import Connection
 from tornado.httpclient import HTTPError
-from malefico.exceptions import MasterRedirect, BadSubscription, ConnectionLost, ConnectError, BadMessage, NoLeadingMaster
+from mentos.exceptions import MasterRedirect, BadSubscription, ConnectionLost, ConnectError, BadMessage, NoLeadingMaster
 
 
 log = logging.getLogger(__name__)

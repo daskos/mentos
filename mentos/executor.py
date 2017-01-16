@@ -9,11 +9,11 @@ import time
 import uuid
 from time import sleep
 from tornado.ioloop import IOLoop
-from malefico.subscription import Subscription, Event
-from malefico.exceptions import ExecutorException
-from malefico.utils import decode_data
-from malefico.utils import encode_data
-from malefico.utils import parse_duration
+from mentos.subscription import Subscription, Event
+from mentos.exceptions import ExecutorException
+from mentos.utils import decode_data
+from mentos.utils import encode_data
+from mentos.utils import parse_duration
 from toolz import merge
 log = logging.getLogger(__name__)
 

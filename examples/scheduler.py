@@ -4,9 +4,9 @@ import sys
 import time
 import uuid
 
-from malefico.interface import Scheduler
-from malefico.scheduler import SchedulerDriver
-from malefico.utils import encode_data
+from mentos.interface import Scheduler
+from mentos.scheduler import SchedulerDriver
+from mentos.utils import encode_data
 from tornado import gen
 
 TASK_CPU = 0.2

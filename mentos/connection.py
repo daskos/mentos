@@ -9,9 +9,9 @@ import sys
 
 from six import raise_from
 
-from malefico.exceptions import (
+from mentos.exceptions import (
     BadSubscription, ConnectError, ConnectionLost, MasterRedirect)
-from malefico.utils import decode, encode, log_errors
+from mentos.utils import decode, encode, log_errors
 from six.moves.urllib.parse import urlparse
 from tornado import concurrent, gen, ioloop, iostream, tcpclient
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
