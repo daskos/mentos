@@ -31,14 +31,14 @@ Requirements:
 - Zookeeper
 
 ## Examples
-Can be found in the examples folder. Excuse the magic.
+An example Mesos Scheduler and Executor can be found in the examples folder. It runs one task and then starts declining offers. The Task basically transmits and prints a message. Excuse the magic.
 
 ## Tests
 Also not there yet.
 
  
 ## Documentation
-An example Mesos Scheduler and Executor can be found in the examples folder.   It runs one task and then starts declining offers. The Task basically transmits and prints a message.
+Not there yet
 
 ## Points to consider
 
