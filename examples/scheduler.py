@@ -1,13 +1,12 @@
 import logging
-from os.path import abspath, dirname, join
 import sys
 import time
 import uuid
+from os.path import abspath, dirname, join
 
 from mentos.interface import Scheduler
 from mentos.scheduler import SchedulerDriver
 from mentos.utils import encode_data
-from tornado import gen
 
 TASK_CPU = 0.2
 TASK_MEM = 128
@@ -73,6 +72,7 @@ class WEEE(Scheduler):
 
     def on_rescinded(self, driver, offer_id):
         pass
+
 
 executor = {
     "executor_id": {

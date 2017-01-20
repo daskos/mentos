@@ -17,12 +17,11 @@ log = logging.getLogger(__name__)
 
 class SchedulerDriver(object):
 
-    def __init__(self, scheduler, name, user=getpass.getuser(), master=os.getenv('MESOS_MASTER') or "localhost",
+    def __init__(self, scheduler, name, user=getpass.getuser(),
+                 master=os.getenv('MESOS_MASTER', 'localhost'),
                  failover_timeout=100, capabilities=None,
-                 implicit_acknowledgements=True, handlers=None, loop=None):
-
+                 implicit_acknowledgements=True, handlers={}, loop=None):
         self.loop = loop or IOLoop()
-
         self.master = master
         self.leading_master_seq = None
         self.leading_master_info = None
@@ -38,19 +37,19 @@ class SchedulerDriver(object):
 
         self.implicit_acknowledgements = implicit_acknowledgements
 
-        self.handlers = merge({
-            Event.SUBSCRIBED: self.on_subscribed,
-            Event.OFFERS: self.on_offers,
-            Event.RESCIND: self.on_rescind,
-            Event.UPDATE: self.on_update,
-            Event.MESSAGE: self.on_message,
-            Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
-            Event.FAILURE: self.on_failure,
-            Event.ERROR: self.on_error,
-            Event.HEARTBEAT: self.on_heartbeat
-        }, handlers or {})
+        default_handlers = {Event.SUBSCRIBED: self.on_subscribed,
+                            Event.OFFERS: self.on_offers,
+                            Event.RESCIND: self.on_rescind,
+                            Event.UPDATE: self.on_update,
+                            Event.MESSAGE: self.on_message,
+                            Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
+                            Event.FAILURE: self.on_failure,
+                            Event.ERROR: self.on_error,
+                            Event.HEARTBEAT: self.on_heartbeat}
+        self.handlers = merge(default_handlers, handlers)
 
-        self.subscription = Subscription(self.framework, self.master, "/api/v1/scheduler", self.handlers,
+        self.subscription = Subscription(self.framework, self.master,
+                                         "/api/v1/scheduler", self.handlers,
                                          timeout=failover_timeout,
                                          loop=self.loop)
 
