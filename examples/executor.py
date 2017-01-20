@@ -2,8 +2,8 @@ from __future__ import print_function
 
 import logging
 import sys
-from threading import Thread
 import time
+from threading import Thread
 
 from mentos.executor import ExecutorDriver
 from mentos.interface import Executor
@@ -22,7 +22,7 @@ class MinimalExecutor(Executor):
                     "value": task["task_id"]["value"]
                 },
                 "state": 'TASK_RUNNING',
-                "timestamp":  int(time.time())
+                "timestamp": int(time.time())
             }
 
             driver.update(update)

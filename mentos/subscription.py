@@ -1,18 +1,17 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import deque
 import logging
+from collections import deque
 
-from mentos.utils import log_errors, MasterInfo
-from tornado import gen
-
-from tornado.ioloop import IOLoop, PeriodicCallback
-from mentos.states import SessionStateMachine, States
-from mentos.retry import RetryPolicy
 from mentos.connection import Connection
-from tornado.httpclient import HTTPError
-from mentos.exceptions import MasterRedirect, BadSubscription, ConnectionLost, ConnectError, BadMessage, NoLeadingMaster
-
+from mentos.exceptions import (BadMessage, BadSubscription, ConnectError,
+                               ConnectionLost, MasterRedirect, NoLeadingMaster)
+from mentos.retry import RetryPolicy
+from mentos.states import SessionStateMachine, States
+from mentos.utils import MasterInfo, log_errors
+from tornado import gen
+from tornado.httpclient import HTTPError, ConnectionRefusedError
+from tornado.ioloop import IOLoop, PeriodicCallback
 
 log = logging.getLogger(__name__)
 
@@ -149,11 +148,11 @@ class Subscription(object):
         try:
             self.state.transition_to(States.SUBSCRIBING)
             request = {
-                      'type': 'SUBSCRIBE',
-                   'subscribe': {
-                       'framework_info': self.framework
-                   }
-               }
+                'type': 'SUBSCRIBE',
+                'subscribe': {
+                    'framework_info': self.framework
+                }
+            }
             if "framework_id" in self.framework:
                 request["framework_id"] = self.framework["framework_id"]
 

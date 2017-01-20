@@ -2,25 +2,25 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import os
-from os import environ as env
 import signal
-from threading import Thread
 import time
 import uuid
+from os import environ as env
+from threading import Thread
 from time import sleep
-from tornado.ioloop import IOLoop
-from mentos.subscription import Subscription, Event
+
 from mentos.exceptions import ExecutorException
-from mentos.utils import decode_data
-from mentos.utils import encode_data
-from mentos.utils import parse_duration
+from mentos.subscription import Event, Subscription
+from mentos.utils import decode_data, encode_data, parse_duration
 from toolz import merge
+from tornado.ioloop import IOLoop
+
 log = logging.getLogger(__name__)
 
 
 class ExecutorDriver():
 
-    def __init__(self, executor,  handlers=None, loop=None):
+    def __init__(self, executor, handlers=None, loop=None):
         """
 
         Args:
@@ -66,8 +66,8 @@ class ExecutorDriver():
             Event.SHUTDOWN: self.on_shutdown
         }, handlers or {})
 
-        self.subscription = Subscription(self.framework, self.master, "/api/v1/executor", self.handlers,
-                                         loop=self.loop)
+        self.subscription = Subscription(self.framework, self.master, "/api/v1/executor",
+                                         self.handlers, loop=self.loop)
 
         self.subscription.tasks = {}
         self.subscription.updates = {}

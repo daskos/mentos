@@ -1,8 +1,10 @@
-from mentos.subscription import Subscription
-
-from tornado import gen, ioloop
-import socket
 import getpass
+import socket
+import time
+
+from mentos.subscription import Subscription
+from tornado import gen, ioloop
+
 sub = {
     "user": getpass.getuser(),
     "name": "test",
@@ -29,9 +31,9 @@ def b():
     while 1:
         yield gen.sleep(1)
 
+    
 io_loop = ioloop.IOLoop.current()
 # io_loop.set_blocking_log_threshold(0.1)
 io_loop.run_sync(b)
 
-import time
 time.sleep(10000)

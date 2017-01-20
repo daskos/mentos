@@ -1,21 +1,20 @@
-from __future__ import (
-    absolute_import, division, print_function, unicode_literals)
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
 
+import logging
 from binascii import a2b_base64, b2a_base64
 from contextlib import contextmanager
-import logging
 
 from mentos.exceptions import NoLeadingMaster
-from toolz import compose
 from tornado import gen, ioloop
-from tornado.escape import json_decode
-from tornado.escape import json_encode
+from tornado.escape import json_decode, json_encode
 from zoonado import Zoonado
 
 log = logging.getLogger(__name__)
 
 decode = json_decode
 encode = json_encode
+
 
 def encode_data(data):
     return b2a_base64(data).strip().decode('ascii')
@@ -69,8 +68,6 @@ def parse_duration(s):
 
     n = float(s[:-len(postfix)])
     return n * unit
-
-
 
 
 class MasterInfo(object):

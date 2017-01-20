@@ -1,20 +1,17 @@
 from __future__ import unicode_literals
 
-import collections
-from collections import deque
+
 import logging
-import re
-import struct
-import sys
 
-from six import raise_from
+from collections import deque
 
-from mentos.exceptions import (
-    BadSubscription, ConnectError, ConnectionLost, MasterRedirect)
+from mentos.exceptions import (BadSubscription, ConnectError, ConnectionLost,
+                               MasterRedirect)
 from mentos.utils import decode, encode, log_errors
+from six import raise_from
 from six.moves.urllib.parse import urlparse
-from tornado import concurrent, gen, ioloop, iostream, tcpclient
-from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
+from tornado import concurrent, gen
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, ConnectionRefusedError
 from tornado.httputil import HTTPHeaders
 
 log = logging.getLogger(__name__)
@@ -170,7 +167,7 @@ class Connection(object):
                 if number > length:
                     msg = msgs[-1]
                     length, message = msg[
-                                      (length - number):], msg[:(length - number)]
+                        (length - number):], msg[:(length - number)]
                     msgs[-1] = message
                     self.buffer.appendleft(length)
 
