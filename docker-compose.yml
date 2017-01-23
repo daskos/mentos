@@ -62,16 +62,26 @@ services:
       - /usr/bin/docker:/usr/bin/docker
       - /var/run/docker.sock:/var/run/docker.sock
     privileged: true
-# pipeline:
-#   # docker-build:
-#   #   image: docker:dind
-#   #   network_mode: host
-#   #   volumes:
-#   #     - /var/run/docker.sock:/var/run/docker.sock
-#   #   commands:
-#   #     - docker build -t org/mentos .
-#   #     - docker tag lensa/satyr localhost:5000/org/mentos
-#   #     - docker push localhost:5000/org/mentos
+
+  mentos:  
+    build: .
+    network_mode: host
+  
+  # mentos:  
+  #   build: .
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   image: docker:dind
+  #   network_mode: host
+  # docker-build:
+  #   image: docker:dind
+  #   network_mode: host
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   commands:
+  #     - docker build -t org/mentos .
+  #     - docker tag lensa/satyr localhost:5000/org/mentos
+  #     - docker push localhost:5000/org/mentos
 
 #   test:
 #     image: python:3.5.2-alpine
