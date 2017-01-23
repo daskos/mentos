@@ -10,7 +10,7 @@ from mentos.retry import RetryPolicy
 from mentos.states import SessionStateMachine, States
 from mentos.utils import MasterInfo, log_errors
 from tornado import gen
-from tornado.httpclient import HTTPError, ConnectionRefusedError
+from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
 
 log = logging.getLogger(__name__)

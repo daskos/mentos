@@ -20,5 +20,5 @@ setup(name='mentos',
                         else ''),
       install_requires=['zoonado', 'tornado', 'six', 'toolz'],
       setup_requires=['pytest-runner'],
-      tests_require=['pytest-mock', 'pytest'],
+      tests_require=['pytest-mock', 'pytest', 'mock'],
       zip_safe=True)

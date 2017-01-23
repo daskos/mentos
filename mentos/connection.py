@@ -11,7 +11,7 @@ from mentos.utils import decode, encode, log_errors
 from six import raise_from
 from six.moves.urllib.parse import urlparse
 from tornado import concurrent, gen
-from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest, ConnectionRefusedError
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from tornado.httputil import HTTPHeaders
 
 log = logging.getLogger(__name__)
