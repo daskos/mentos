@@ -12,7 +12,7 @@ matrix:
   include:
     - python: "2.7"
       env: OS=ubuntu-14.04
-    - python: "3.6"
+    - python: "3.5"
       env: OS=ubuntu-14.04
     - python: "3.6"
       env: OS=ubuntu-14.04
@@ -38,6 +38,9 @@ before_install:
 install:
   - which python
   - python setup.py install
+  - pip install  pytest-mock pytest mock pytest-tornado
+
+
 
 script:
   - py.test tests/ --verbose

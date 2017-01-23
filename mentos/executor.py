@@ -29,11 +29,10 @@ class ExecutorDriver():
         """
         self.loop = loop or IOLoop()
 
-        self.master = env['MESOS_AGENT_ENDPOINT']
-        log.debug("master is aaaaaaaaaaa %s" % self.master)
+        self.master = env.get('MESOS_AGENT_ENDPOINT',"")
 
-        self.framework_id = dict(value=env['MESOS_FRAMEWORK_ID'])
-        self.executor_id = dict(value=env['MESOS_EXECUTOR_ID'])
+        self.framework_id = dict(value= env.get('MESOS_FRAMEWORK_ID',""))
+        self.executor_id = dict(value= env.get('MESOS_EXECUTOR_ID',""))
 
         self.framework = {
             "framework_id": self.framework_id,
@@ -129,7 +128,7 @@ class ExecutorDriver():
             "framework_id": self.framework_id,
             "executor_id": self.executor_id,
             "message": {
-                "data": encode_data(message)
+                "data": encode_data(message.encode())
             }
         }
         self.loop.add_callback(self.subscription.send, payload)
