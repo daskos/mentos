@@ -1,0 +1,47 @@
+language: python
+dist: trusty
+sudo: required
+
+notifications:
+  email: false
+
+services:
+  - docker
+
+matrix:
+  include:
+    - python: "2.7"
+      env: OS=ubuntu-14.04
+    - python: "3.6"
+      env: OS=ubuntu-14.04
+    - python: "3.6"
+      env: OS=ubuntu-14.04
+
+env:
+  global:
+    - DOCKER_COMPOSE_VERSION=1.6.0
+
+before_install:
+  - pwd
+
+  # Install docker
+  - bash ci/scripts/travis_docker_setup.sh
+  - docker version
+  - docker-compose version
+
+  # Start containers
+  - export DOCKER_IP=127.0.0.1
+  - docker-compose up -d
+  - docker ps -a
+  - docker images
+
+install:
+  - which python
+  - python setup.py install
+
+script:
+  - py.test mentos/tests/ --verbose
+
+after_success:
+  - pip install coveralls
+  - coveralls

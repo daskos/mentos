@@ -1,5 +1,0 @@
-- name: test
-  type: parallel
-  steps:
-  - service: mentos
-    command: python setup.py test
