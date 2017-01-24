@@ -5,7 +5,7 @@ from mentos import utils,exceptions as exc
 import six
 import socket
 from subprocess import Popen, PIPE
-
+import time
 
 
 @pytest.fixture
@@ -139,7 +139,7 @@ def test_master_info_zk():
           stdout=PIPE, stderr=PIPE)
 
     a = p.wait()
-    import time
+
     time.sleep(20)
     url_again = yield master.get_endpoint()
 

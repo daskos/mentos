@@ -12,6 +12,7 @@ services:
     environment:
       - MESOS_LOGGING_LEVEL=ERROR
       - MESOS_IP=127.0.0.1
+      - MESOS_HOSTNAME=localhost
       - MESOS_ZK=zk://127.0.0.1:2181/mesos
       - MESOS_QUORUM=2
       - MESOS_CLUSTER=test
@@ -23,6 +24,7 @@ services:
     environment:
       - MESOS_LOGGING_LEVEL=ERROR
       - MESOS_IP=127.0.0.1
+      - MESOS_HOSTNAME=localhost
       - MESOS_ZK=zk://127.0.0.1:2181/mesos
       - MESOS_QUORUM=2
       - MESOS_CLUSTER=test
