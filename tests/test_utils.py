@@ -103,12 +103,12 @@ def test_master_info_zk():
 
     assert master.detector != None
 
-    hostname = socket.gethostname()
+
     url = yield master.get_endpoint()
     assert url != None
     assert master.info !=None
 
-    assert master.info["hostname"] == hostname
+    assert master.info["hostname"] == "localhost"
 
     assert master.info["port"] in (5050,6060)
 
@@ -123,7 +123,7 @@ def test_master_info_zk():
 
     assert master.info != None
 
-    assert master.info["hostname"] == hostname
+    assert master.info["hostname"] == "localhost"
 
     assert master.info["port"] in (5050, 6060)
 
@@ -149,7 +149,7 @@ def test_master_info_zk():
 
     assert master.info != None
 
-    assert master.info["hostname"] == hostname
+    assert master.info["hostname"] == "localhost"
 
     assert master.info["port"] in set([5050, 6060]) - set([old_info["port"]])
 
