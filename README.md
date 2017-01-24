@@ -1,5 +1,5 @@
 
-# mentos - A Python implementation  of a Mesos Scheduler/Executor driver
+# mentos - A Pure Python implementation of a Mesos Scheduler/Executor driver
 ###### Long Lasting Mesos freshness for Python
 
 [![Build Status](https://travis-ci.org/Arttii/mentos.svg?branch=master)](https://travis-ci.org/Arttii/mentos)
@@ -34,7 +34,7 @@ Requirements:
 
 
 ## Development
-Run docker-compose up to get a working instalation of Mesos going.
+Run `docker-compose up` to get a working instalation of Mesos going.
 
 Requirements:
 - docker
@@ -51,8 +51,8 @@ Not full coverage yet. Working on it
 Not there yet
 
 ## Outlook
-The long term goal is for this to serve as a base for Satyr and other more high level Python based frameworks.
+The long term goal is for this to serve as a base for [Satyr](https://github.com/lensacom/satyr) and other more high level Python based frameworks.
 
 ## Acknowledgements
 This has been heavily based on [zoonado](https://github.com/wglass/zoonado) and was influenced by [Satyr](https://github.com/lensacom/satyr) and [PyMesos](https://github.com/douban/pymesos) and shares some utility code with both.
-The RecordIO format parsing was lifted from mrocklins [gist](https://gist.github.com/mrocklin/72cfd17a9f097e7880730d66cbde16a0)
+The RecordIO format parsing was lifted from mrocklins [gist](https://gist.github.com/mrocklin/72cfd17a9f097e7880730d66cbde16a0).
