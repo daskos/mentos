@@ -16,7 +16,7 @@ mentos is still quite experimental right now. No production frameworks have been
 - Full featured Zookeeper and Redirect based Master detection
 - Dict based for simplicity
 - Task scheduling should be quite fast due to the asynchronous nature of the networking engine
-- Fairly simple codebase
+- Nice policy based reconnect and retry system
 - Fancy Testing and Development enviroment based on docker-compose
 
 ## Install
