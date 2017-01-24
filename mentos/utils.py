@@ -25,7 +25,7 @@ def decode_data(data):
 
 
 @contextmanager
-def log_errors(pdb=False):
+def log_errors(pdb=False):# pragma: no cover
     try:
         yield
     except (gen.Return):
@@ -58,7 +58,7 @@ def parse_duration(s):
         if s.endswith(postfix):
             try:
                 return float(s[:-len(postfix)]) * unit
-            except ValueError:
+            except ValueError:# pragma: no cover
                 continue
 
     raise Exception('Unknown duration \'%s\'; supported units are %s' % (
@@ -95,7 +95,7 @@ class MasterInfo(object):
 
             children = yield self.detector.get_children("/mesos")
             children = [child for child in children if child != 'log_replicas']
-            if not children:
+            if not children: # pragma: no cover
                 log.error("No leading Master found in zookeeper")
                 raise NoLeadingMaster("No leading Master found in zookeeper")
             self.seq = min(children)
@@ -116,7 +116,7 @@ class MasterInfo(object):
 
         if "hostname" in self.info["address"]:
             host = self.info["address"]["hostname"]
-        elif "ip" in self.info["address"]:
+        elif "ip" in self.info["address"]:# pragma: no cover
             host = self.info["address"]["ip"]
 
         port = self.info["address"]["port"]

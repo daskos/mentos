@@ -52,6 +52,9 @@ def test_parse_duration():
     for k, v in six.iteritems(utils.POSTFIX):
         assert utils.parse_duration("3 " + k) == v * 3.0
 
+    with pytest.raises(Exception):
+        utils.parse_duration("3megawats")
+
 
 def test_encode_data():
     assert utils.encode_data(b"stuff") == 'c3R1ZmY='
@@ -110,6 +113,8 @@ def test_master_info_zk():
 
     assert master.info["hostname"] == "localhost"
 
+    assert master.info["ip"] != None
+
     assert master.info["port"] in (5050,6060)
 
     with pytest.raises(exc.NoRedirectException):
@@ -125,10 +130,12 @@ def test_master_info_zk():
 
     assert master.info["hostname"] == "localhost"
 
+    assert master.info["ip"] != None
+
     assert master.info["port"] in (5050, 6060)
 
 
-    if master.info["port"] == 5050:
+    if master.info["port"] == 5050:# pragma: no cover
         active = "mesos_master_0"
     else:
         active = "mesos_master_1"
@@ -150,6 +157,8 @@ def test_master_info_zk():
     assert master.info != None
 
     assert master.info["hostname"] == "localhost"
+
+    assert master.info["ip"] != None
 
     assert master.info["port"] in set([5050, 6060]) - set([old_info["port"]])
 

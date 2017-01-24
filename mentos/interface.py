@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 class Scheduler(object):
 
-    def on_registered(self, driver, framework_id, master):
+    def on_registered(self, driver, framework_id, master):# pragma: no cover
         """Event handler triggered when the scheduler successfully registers
            with a master.
         Parameters
@@ -25,7 +25,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_reregistered(self, driver, framework_id, master):
+    def on_reregistered(self, driver, framework_id, master):# pragma: no cover
         """Event handler triggered when the scheduler re-registers with a newly
            elected master.
         This is only called when the scheduler has previously been registered.
@@ -42,7 +42,7 @@ class Scheduler(object):
         log.debug("Method {} not implemented".format(
             sys._getframe().f_code.co_name))
 
-    def on_disconnected(self, driver):
+    def on_disconnected(self, driver):# pragma: no cover
         """Event handler triggereg when the scheduler becomes disconnected from
            the master.
         (e.g. the master fails and another is taking over)
@@ -53,7 +53,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_offers(self, driver, offers):
+    def on_offers(self, driver, offers):# pragma: no cover
         """Event handler triggered when resources have been offered to this
            framework.
         A single offer will only contain resources from a single slave.
@@ -77,7 +77,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_rescinded(self, driver, offer_id):
+    def on_rescinded(self, driver, offer_id):# pragma: no cover
         """Event handler triggered when an offer is no longer valid.
         (e.g., the slave was lost or another framework used resources in the
         offer)
@@ -94,7 +94,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_rescind_inverse(self, driver, offer_id):
+    def on_rescind_inverse(self, driver, offer_id):# pragma: no cover
         """Event handler triggered when an offer is no longer valid.
         (e.g., the slave was lost or another framework used resources in the
         offer)
@@ -111,7 +111,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_update(self, driver, status):
+    def on_update(self, driver, status):# pragma: no cover
         """Event handler triggered when the status of a task has changed.
         (e.g., a slave is lost and so the task is lost, a task finishes and an
         executor sends a status update saying so, etc.)
@@ -132,7 +132,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_message(self, driver, executor_id, slave_id, message):
+    def on_message(self, driver, executor_id, slave_id, message):# pragma: no cover
         """Event handler triggered when an executor sends a message.
         These messages are best effort; do not expect a framework message to be
         retransmitted in any reliable fashion.
@@ -149,7 +149,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_slave_lost(self, driver, slave_id):
+    def on_slave_lost(self, driver, slave_id):# pragma: no cover
         """Event handler triggered when a slave has been determined unreachable.
         (e.g., machine failure, network partition.)
         Most frameworks will need to reschedule any tasks launched on this slave
@@ -163,7 +163,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_executor_lost(self, driver, executor_id, slave_id, status):
+    def on_executor_lost(self, driver, executor_id, slave_id, status):# pragma: no cover
         """Event handler triggered when an executor has exited/terminated.
         Note that any tasks running will have TASK_LOST status updates
         automatically generated.
@@ -182,7 +182,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_error(self, driver, message):
+    def on_error(self, driver, message):# pragma: no cover
         """Event handler triggered when there is an unrecoverable error in the
            scheduler or scheduler driver.
         The driver will be aborted BEFORE invoking this callback.
@@ -195,7 +195,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_heartbeat(self, driver, message):
+    def on_heartbeat(self, driver, message):# pragma: no cover
         """Event handler triggered when a heartbeat is recieved from the Master.
         Parameters
         ----------
@@ -206,7 +206,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_outbound_error(self, driver, response):
+    def on_outbound_error(self, driver, response):# pragma: no cover
         """Event handler triggered when an error has occured when sending data to the Master
         Parameters
         ----------
@@ -217,7 +217,7 @@ class Scheduler(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_outbound_success(self, driver, response):
+    def on_outbound_success(self, driver, response):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Master
         Parameters
         ----------
@@ -235,7 +235,7 @@ class Executor(object):
     methods they don't override.
     """
 
-    def on_registered(self, driver, executor, framework, slave):
+    def on_registered(self, driver, executor, framework, slave):# pragma: no cover
         """Event handler triggered when the executor driver has been able to
            successfully connect with Mesos.
         In particular, a scheduler can pass some data to its executors through
@@ -253,7 +253,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_reregistered(self, driver, slave):
+    def on_reregistered(self, driver, slave):# pragma: no cover
         """Event handler triggered when the executor re-registers with a
            restarted slave.
         Parameters
@@ -265,7 +265,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_disconnected(self, driver):
+    def on_disconnected(self, driver):# pragma: no cover
         """Event handler triggered when the executor becomes "disconnected" from
            the slave.
         (e.g., the slave is being restarted due to an upgrade)
@@ -276,7 +276,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_launch(self, driver, task):
+    def on_launch(self, driver, task):# pragma: no cover
         """Event handler triggered when a task has been launched on this
            executor (initiated via Scheduler.launch).
         Note that this task can be realized with a thread, a process, or some
@@ -291,7 +291,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_kill(self, driver, task_id):
+    def on_kill(self, driver, task_id):# pragma: no cover
         """Event handler triggered when a task running within this executor has
            been killed (via SchedulerDriver.kill).
         Note that no status update will be sent on behalf of the executor, the
@@ -306,7 +306,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_message(self, driver, message):
+    def on_message(self, driver, message):# pragma: no cover
         """Event handler triggered when a framework message has arrived for this
            executor.
         These messages are best effort; do not expect a framework message to be
@@ -320,7 +320,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_shutdown(self, driver):
+    def on_shutdown(self, driver):# pragma: no cover
         """Event handler triggered when the executor should terminate all of its
            currently running tasks.
         Note that after Mesos has determined that an executor has terminated any
@@ -334,7 +334,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_error(self, driver, message):
+    def on_error(self, driver, message):# pragma: no cover
         """Event handler triggered when a fatal error has occurred with the
            executor and/or executor driver.
         The driver will be aborted BEFORE invoking this callback.
@@ -347,7 +347,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_outbound_error(self, driver, response):
+    def on_outbound_error(self, driver, response):# pragma: no cover
         """Event handler triggered when an error has occured when sending data to the Executor
         Parameters
         ----------
@@ -358,7 +358,7 @@ class Executor(object):
         """
         log.debug("{} Implemented".format(sys._getframe().f_code.co_name))
 
-    def on_outbound_success(self, driver, response):
+    def on_outbound_success(self, driver, response):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Executor
         Parameters
         ----------
