@@ -8,10 +8,9 @@ def fsm():
     return states.SessionStateMachine()
 
 
- 
 def test_defaults_to_closed_state(fsm):
     # fsm = fsm
-    assert fsm.current_state==states.States.CLOSED
+    assert fsm.current_state == states.States.CLOSED
 
 
 def test_fsm_equality(fsm):
@@ -120,17 +119,17 @@ def test_invalid_transitions(fsm):
     #     fsm.transition_to(states.States.CLOSED)
 
     # closed sessions cannot be suspended
-    with  pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         fsm.transition_to(states.States.SUSPENDED)
 
     fsm.transition_to(states.States.SUBSCRIBED)
 
     # connected sessions cannot become read-only (suspended or closed first)
-    with  pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         fsm.transition_to(states.States.SUBSCRIBING)
 
     # connected sessions cannot be connected again
-    with  pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         fsm.transition_to(states.States.SUBSCRIBED)
 
     fsm.transition_to(states.States.SUSPENDED)
@@ -142,5 +141,5 @@ def test_invalid_transitions(fsm):
     fsm.transition_to(states.States.SUBSCRIBING)
 
     # read-only sessions cannot be made read-only twice
-    with  pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         fsm.transition_to(states.States.SUBSCRIBING)

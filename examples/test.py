@@ -28,10 +28,10 @@ def b():
         a = yield a.send({})
     except Exception as ex:
         a = 1
-    while 1:
+    while True:
         yield gen.sleep(1)
 
-    
+
 io_loop = ioloop.IOLoop.current()
 # io_loop.set_blocking_log_threshold(0.1)
 io_loop.run_sync(b)

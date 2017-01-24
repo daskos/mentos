@@ -5,7 +5,7 @@ import logging
 from binascii import a2b_base64, b2a_base64
 from contextlib import contextmanager
 
-from mentos.exceptions import NoLeadingMaster
+from mentos.exceptions import NoLeadingMaster,NoRedirectException
 from tornado import gen, ioloop
 from tornado.escape import json_decode, json_encode
 from zoonado import Zoonado
@@ -54,20 +54,16 @@ def parse_duration(s):
     s = s.strip()
     unit = None
     postfix = None
-    for n, u in POSTFIX.items():
-        if s.endswith(n):
-            unit = u
-            postfix = n
-            break
+    for postfix, unit in POSTFIX.items():
+        if s.endswith(postfix):
+            try:
+                return float(s[:-len(postfix)]) * unit
+            except ValueError:
+                continue
 
-    # TODO exceptions?
-    assert unit is not None, \
-        'Unknown duration \'%s\'; supported units are %s' % (
-            s, ','.join('\'%s\'' % n for n in POSTFIX)
-        )
-
-    n = float(s[:-len(postfix)])
-    return n * unit
+    raise Exception('Unknown duration \'%s\'; supported units are %s' % (
+        s, ','.join('\'%s\'' % n for n in POSTFIX)
+    ))
 
 
 class MasterInfo(object):
@@ -83,12 +79,15 @@ class MasterInfo(object):
             log.warn("Using Zookeeper for Discovery")
             self.quorum = ",".join([zoo[zoo.index('://') + 3:]
                                     for zoo in self.uri.split(",")])
-            self.detector = Zoonado(self.quorum)
+            self.detector = Zoonado(self.quorum,session_timeout=60)
 
             ioloop.IOLoop.current().add_callback(self.detector.start)
 
     def redirected_uri(self, uri):
-        self.uri = uri
+        if not self.detector:
+            self.uri = uri
+        else:
+            raise NoRedirectException("Using Zookeeper, cannot set a redirect url")
 
     @gen.coroutine
     def get_endpoint(self, path=""):

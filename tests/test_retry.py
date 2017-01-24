@@ -18,98 +18,104 @@ def test_clear_timings():
     yield policy.enforce(request1)
     yield policy.enforce(request2)
 
-    assert len(policy.timings[id(request1)])== 2
-    assert len(policy.timings[id(request2)])== 1
+    assert len(policy.timings[id(request1)]) == 2
+    assert len(policy.timings[id(request2)]) == 1
 
     policy.clear(request1)
 
     assert id(request1) not in policy.timings
-    assert len(policy.timings[id(request2)])== 1
+    assert len(policy.timings[id(request2)]) == 1
+
 
 def test_once():
     policy = retry.RetryPolicy.once()
 
-    assert policy.try_limit== 1
-    assert policy.sleep_func([1, 2, 3])== None
+    assert policy.try_limit == 1
+    assert policy.sleep_func([1, 2, 3]) is None
+
 
 def test_n_times():
     policy = retry.RetryPolicy.n_times(3)
 
-    assert policy.try_limit== 3
-    assert policy.sleep_func([1, 2, 3])== None
+    assert policy.try_limit == 3
+    assert policy.sleep_func([1, 2, 3]) is None
+
 
 def test_forever():
     policy = retry.RetryPolicy.forever()
 
-    assert policy.try_limit == None
-    assert policy.sleep_func([1, 2, 3])== None
+    assert policy.try_limit is None
+    assert policy.sleep_func([1, 2, 3]) is None
+
 
 def test_exponential_backoff():
     policy = retry.RetryPolicy.exponential_backoff()
 
-    assert policy.try_limit== None
+    assert policy.try_limit is None
 
     timings = []
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait== 1
+    assert wait == 1
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait== 2
+    assert wait == 2
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==4
+    assert wait == 4
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==8
+    assert wait == 8
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==16
+    assert wait == 16
+
 
 def test_exponential_backoff_with_max_and_base():
     policy = retry.RetryPolicy.exponential_backoff(base=3, maximum=25)
 
-    assert policy.try_limit== None
+    assert policy.try_limit is None
 
     timings = []
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==1
+    assert wait == 1
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==3
+    assert wait == 3
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==9
+    assert wait == 9
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==25
+    assert wait == 25
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
 
-    assert wait==25
+    assert wait == 25
+
 
 @patch.object(retry, "time")
-def test_until_elapsed( mock_time):
+def test_until_elapsed(mock_time):
     state = {"now": time.time()}
 
     policy = retry.RetryPolicy.until_elapsed(timeout=4)
@@ -120,18 +126,19 @@ def test_until_elapsed( mock_time):
 
     mock_time.time.side_effect = increment_time
 
-    assert policy.try_limit== None
+    assert policy.try_limit is None
 
     timings = []
 
     wait = policy.sleep_func(timings)
     timings.append(state["now"])
 
-    assert wait==3
-    assert policy.sleep_func(timings)== 3
-    assert policy.sleep_func(timings)== 2
-    assert policy.sleep_func(timings)== 1
-    assert policy.sleep_func(timings)== 0
+    assert wait == 3
+    assert policy.sleep_func(timings) == 3
+    assert policy.sleep_func(timings) == 2
+    assert policy.sleep_func(timings) == 1
+    assert policy.sleep_func(timings) == 0
+
 
 @pytest.mark.gen_test
 def test_failed_enforcement():
@@ -143,6 +150,7 @@ def test_failed_enforcement():
 
     with pytest.raises(exc.FailedRetry):
         yield policy.enforce(request)
+
 
 @pytest.mark.gen_test
 def test_timeout_failure():
@@ -159,8 +167,9 @@ def test_timeout_failure():
     with pytest.raises(exc.FailedRetry):
         yield policy.enforce(request)
 
+
 @pytest.mark.gen_test()
-def test_enforcing_wait_time_sleeps( mocker):
+def test_enforcing_wait_time_sleeps(mocker):
     f = concurrent.Future()
     f.set_result(None)
     mock_gen_sleep = mocker.patch.object(retry.gen, "sleep")
@@ -176,7 +185,7 @@ def test_enforcing_wait_time_sleeps( mocker):
 
     yield policy.enforce(request)
 
-    assert mock_gen_sleep.called==False
+    assert mock_gen_sleep.called == False
 
     yield policy.enforce(request)
 

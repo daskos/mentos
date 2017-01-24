@@ -16,6 +16,7 @@ services:
       - MESOS_QUORUM=2
       - MESOS_CLUSTER=test
       - MESOS_REGISTRY=in_memory
+    restart: "always"
   mesos_master_1:
     network_mode: "host"
     image: mesosphere/mesos-master:1.1.0-2.0.107.ubuntu1404
@@ -27,6 +28,8 @@ services:
       - MESOS_CLUSTER=test
       - MESOS_REGISTRY=in_memory
       - MESOS_PORT=6060
+    restart: "always"
+  
   mesos_slave_0:
     network_mode: "host"
     image: mesosphere/mesos-slave:1.1.0-2.0.107.ubuntu1404

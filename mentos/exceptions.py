@@ -40,3 +40,6 @@ class BadMessage(MesosError):
 
 class ExecutorException(MesosError):
     pass
+
+class NoRedirectException(MesosError):
+    pass
