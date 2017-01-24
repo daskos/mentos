@@ -38,12 +38,11 @@ before_install:
 install:
   - which python
   - python setup.py install
-  - pip install  pytest-mock pytest mock pytest-tornado pytest-cov
+  - pip install tox-travis
 
 
 
-script:
-  - py.test --cov-report= --cov=mentos --verbose
+script: tox
 
 after_success:
   - pip install coveralls

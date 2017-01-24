@@ -1,6 +1,8 @@
 
 # mentos - A Python implementation  of a Mesos Scheduler/Executor driver
-###### dangerous
+###### Log Lasting Mesos freshness for Python
+
+[![Build Status](https://travis-ci.org/Arttii/mentos.svg?branch=master)](https://travis-ci.org/Arttii/mentos)
 
 The main goal is to provide a low-complexity and feature rich support for pure python Mesos Frameworks, but also to learn things.
 
