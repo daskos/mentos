@@ -38,12 +38,12 @@ before_install:
 install:
   - which python
   - python setup.py install
-  - pip install  pytest-mock pytest mock pytest-tornado
+  - pip install  pytest-mock pytest mock pytest-tornado pytest-cov
 
 
 
 script:
-  - py.test tests/ --verbose
+  - py.test --cov-report= --cov=mentos --verbose
 
 after_success:
   - pip install coveralls
