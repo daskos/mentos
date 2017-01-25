@@ -21,7 +21,7 @@ def getResource(res, name):
     return 0.0
 
 
-class WEEE(Scheduler):
+class MinimalScheduler(Scheduler):
 
     def __init__(self, executor):
         self.executor = executor
@@ -92,7 +92,7 @@ executor = {
 
 }
 logging.getLogger().setLevel(logging.DEBUG)
-driver = SchedulerDriver(WEEE(executor), "Test", "arti",
+driver = SchedulerDriver(MinimalScheduler(executor), "Test", "arti",
                          master="zk://localhost:2181")
 
 with driver:

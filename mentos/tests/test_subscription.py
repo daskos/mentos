@@ -7,7 +7,7 @@ from mentos import subscription
 from mentos.utils import encode_data
 from subprocess import Popen,PIPE
 import time
-@pytest.mark.gen_test(run_sync=False, timeout=200)
+@pytest.mark.gen_test(run_sync=False, timeout=600)
 def test_subscription(io_loop, mocker):
     subm = {
         "user": "Test",
@@ -82,7 +82,7 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    yield gen.sleep(2)
+    yield gen.sleep(5)
 
     time.sleep(30)
 
