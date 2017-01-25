@@ -7,28 +7,6 @@ from mentos import subscription
 from mentos.utils import encode_data
 from subprocess import Popen,PIPE
 
-
-@pytest.mark.gen_test(run_sync=True, timeout=100)
-def test_bad_subscription(io_loop, mocker):
-    subm = {
-
-    }
-
-    handler = mocker.Mock()
-
-    sub = subscription.Subscription(subm, "zk://localhost:2181", "/api/v1/scheduler", {subscription.Event.SUBSCRIBED: handler,
-                                                                                       subscription.Event.HEARTBEAT: handler,
-                                                                                       subscription.Event.OFFERS:handler,
-                                                                                       subscription.Event.SHUTDOWN: handler},
-                                    timeout=1, loop=io_loop)
-
-    assert sub.state.current_state == states.States.CLOSED
-    yield sub.start()
-    yield gen.sleep(5)
-    assert sub.state.current_state == states.States.CLOSED
-
-
-
 @pytest.mark.gen_test(run_sync=True, timeout=100)
 def test_subscription(io_loop, mocker):
     subm = {
@@ -100,7 +78,6 @@ def test_subscription(io_loop, mocker):
     else:
         active = "mesos_master_1"
 
-    old_info = sub.master_info.info.copy()
     p = Popen(["docker-compose restart %s" % active], shell=True,
               stdout=PIPE, stderr=PIPE)
 
@@ -138,6 +115,24 @@ def test_subscription(io_loop, mocker):
     sub.close()
     assert sub.closing == True
 
-    #yield gen.sleep(10)
 
-    pass
+
+@pytest.mark.gen_test(run_sync=True, timeout=100)
+def test_bad_subscription(io_loop, mocker):
+    subm = {
+
+    }
+
+    handler = mocker.Mock()
+
+    sub = subscription.Subscription(subm, "zk://localhost:2181", "/api/v1/scheduler", {subscription.Event.SUBSCRIBED: handler,
+                                                                                       subscription.Event.HEARTBEAT: handler,
+                                                                                       subscription.Event.OFFERS:handler,
+                                                                                       subscription.Event.SHUTDOWN: handler},
+                                    timeout=1, loop=io_loop)
+
+    assert sub.state.current_state == states.States.CLOSED
+    yield sub.start()
+    yield gen.sleep(5)
+    assert sub.state.current_state == states.States.CLOSED
+
