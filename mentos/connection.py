@@ -120,7 +120,8 @@ class Connection(object):
             url=self.endpoint + (path or self.api_path),
             method='GET',
             headers=self.headers,
-            follow_redirects=False
+            follow_redirects=False,
+            request_timeout = 100
         )
         try:
             yield self.outbound_client.fetch(request)

@@ -79,7 +79,7 @@ class MasterInfo(object):
             log.warn("Using Zookeeper for Discovery")
             self.quorum = ",".join([zoo[zoo.index('://') + 3:]
                                     for zoo in self.uri.split(",")])
-            self.detector = Zoonado(self.quorum,session_timeout=60)
+            self.detector = Zoonado(self.quorum,session_timeout=6000)
 
             ioloop.IOLoop.current().add_callback(self.detector.start)
 

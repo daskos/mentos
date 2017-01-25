@@ -6,7 +6,7 @@ from mentos import exceptions as exc
 from mentos import subscription
 from mentos.utils import encode_data
 from subprocess import Popen,PIPE
-
+import time
 @pytest.mark.gen_test(run_sync=True, timeout=200)
 def test_subscription(io_loop, mocker):
     subm = {
@@ -83,6 +83,8 @@ def test_subscription(io_loop, mocker):
     a = p.wait()
 
     yield gen.sleep(5)
+
+    time.sleep(20)
 
     assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
