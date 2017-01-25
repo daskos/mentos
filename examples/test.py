@@ -20,7 +20,7 @@ def handler(event):
 
 @gen.coroutine
 def b():
-    a = Subscription(sub, "zk://localhost:2181", "/api/v1/scheduler",
+    a = Subscription(sub, "zk://localhost:2181", "/api/v1/scheduler",{"SUBSCRIBED": handler},
                      timeout=1, loop=ioloop.IOLoop.current())
     yield a.start()
 

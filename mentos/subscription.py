@@ -60,13 +60,9 @@ class Subscription(object):
 
         self.retry_policy = retry_policy
 
-        self.connection_successful = False
-
         self.api_path = api_path
 
         self.event_handlers = event_handlers or {}
-
-        self.buffer = deque()
 
         self.closing = False
 
@@ -83,8 +79,8 @@ class Subscription(object):
         self.timeout = timeout
 
     @gen.coroutine
-    def ensure_safe(self):
-        safe_states = [States.SUBSCRIBED, States.SUBSCRIBING]
+    def ensure_safe(self,safe_states = [States.SUBSCRIBED, States.SUBSCRIBING]):
+
         if self.state in safe_states:
             return
 
@@ -109,7 +105,7 @@ class Subscription(object):
         with log_errors():
             while not self.closing:
                 yield self.state.wait_for(States.CLOSED, States.SUSPENDED)
-                if self.closing:
+                if self.closing:# pragma: no cover
                     break
 
                 yield self.detect_master()
@@ -140,7 +136,7 @@ class Subscription(object):
         old_conn = self.connection
         self.connection = conn
         log.warn("Connected to %s" % endpoint)
-        if old_conn:
+        if old_conn:# pragma: no cover
             old_conn.close()
 
     @gen.coroutine
@@ -153,17 +149,17 @@ class Subscription(object):
                     'framework_info': self.framework
                 }
             }
-            if "framework_id" in self.framework:
-                request["framework_id"] = self.framework["framework_id"]
+            if "id" in self.framework:
+                request["framework_id"] = self.framework["id"]
 
-            if "executor_id" in self.framework:
+            if "executor_id" in self.framework:# pragma: no cover
                 request["executor_id"] = self.framework["executor_id"]
 
-            if self.tasks is not None:
+            if self.tasks is not None:# pragma: no cover
                 request["subscribe"]["unacknowledged_tasks"] = list(
                     self.tasks.values())
 
-            if self.updates is not None:
+            if self.updates is not None:# pragma: no cover
                 request["subscribe"]["unacknowledged_updates"] = list(
                     self.updates.values())
 
@@ -181,17 +177,19 @@ class Subscription(object):
 
     @gen.coroutine
     def make_connection(self, endpoint, api_path):
-        conn = Connection(endpoint, self.mesos_stream_id,
-                          api_path, self._event_handler)
+        conn = Connection(endpoint,api_path, self._event_handler)
         try:
             yield conn.ping()
         except MasterRedirect as ex:
-            log.warn("Master not leading")
-            self.master_info.redirected_uri(ex.location)
+            if ex.location == self.master_info.current_location:
+                log.warn("Leading Master not elected yet")
+            else:
+                log.warn("Master not leading")
+                self.master_info.redirected_uri(ex.location)
             conn = None
-        except ConnectionRefusedError as ex:
+        except ConnectionRefusedError as ex:# pragma: no cover
             conn = None
-        except Exception:
+        except Exception:# pragma: no cover
             conn = None
 
         raise gen.Return(conn)
@@ -199,15 +197,17 @@ class Subscription(object):
     @gen.coroutine
     def send(self, request):
         response = None
+        #wait for safe state
+        yield self.state.wait_for(States.SUBSCRIBED)
         while not response:
             yield self.retry_policy.enforce(request)
             yield self.ensure_safe()
             try:
                 if "framework_id" not in request:
-                    request["framework_id"] = self.framework["framework_id"]
+                    request["framework_id"] = self.framework["id"]
                 response = yield self.connection.send(request)
                 self.retry_policy.clear(request)
-            except ConnectError as ex:
+            except ConnectError as ex:# pragma: no cover
                 self.state.transition_to(States.SUSPENDED)
                 log.error(ex)
             except HTTPError as ex:
@@ -215,7 +215,6 @@ class Subscription(object):
                                  ex.response.body.decode())
                 log.error(exc)
                 raise exc
-
         raise gen.Return(response)
 
     def _event_handler(self, message):
@@ -224,7 +223,7 @@ class Subscription(object):
             # Add special check to intercept framework_id
             if message.get("type", None) == Event.SUBSCRIBED:
                 if "framework_id" in message["subscribed"]:
-                    self.framework["framework_id"] = message[
+                    self.framework["id"] = message[
                         "subscribed"]["framework_id"]
 
             if message["type"] in self.event_handlers:
@@ -233,13 +232,13 @@ class Subscription(object):
                           (_type, self.master_info.info))
                 if _type == Event.HEARTBEAT:
                     self.event_handlers[_type](message)
-                elif _type == Event.SHUTDOWN:
+                elif _type == Event.SHUTDOWN:# pragma: no cover
                     self.event_handlers[_type]()
                 else:
                     self.event_handlers[_type](message[_type.lower()])
-            else:
+            else:# pragma: no cover
                 log.warn("Unhandled event %s" % message)
-        except Exception as ex:
+        except Exception as ex:# pragma: no cover
             log.warn("Problem dispatching event %s" % message)
             log.exception(ex)
 

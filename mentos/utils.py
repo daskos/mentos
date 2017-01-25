@@ -83,11 +83,15 @@ class MasterInfo(object):
 
             ioloop.IOLoop.current().add_callback(self.detector.start)
 
+        self.current_location = None
+
     def redirected_uri(self, uri):
         if not self.detector:
             self.uri = uri
         else:
             raise NoRedirectException("Using Zookeeper, cannot set a redirect url")
+
+
 
     @gen.coroutine
     def get_endpoint(self, path=""):
@@ -121,8 +125,10 @@ class MasterInfo(object):
 
         port = self.info["address"]["port"]
 
+        self.current_location  = "{host}:{port}".format(host=host, port=port)
+
         raise gen.Return(
-            "http://{host}:{port}{path}".format(host=host, port=port, path=path))
+            "http://{current_location}{path}".format(current_location=self.current_location, path=path))
 
 
 def drain(iterable):

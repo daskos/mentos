@@ -27,7 +27,7 @@ class Connection(object):
         'Connection': 'close'
     }
 
-    def __init__(self, endpoint, stream_id, api_path, event_handler):
+    def __init__(self, endpoint, api_path, event_handler):
 
         self.endpoint = endpoint
         self.api_path = api_path
@@ -38,7 +38,7 @@ class Connection(object):
         self.pending = {}
 
         self.buffer = deque()
-        self.mesos_stream_id = stream_id
+        self.mesos_stream_id = None
 
         self.closing = False
 

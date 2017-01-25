@@ -6,7 +6,7 @@ from os.path import exists
 from setuptools import setup
 
 setup(name='mentos',
-      version='0.1.0',
+      version='0.1.1',
       description='Python Mesos scheduler and executor',
       url='http://github.com/arttii/mentos',
       maintainer='Artyom Topchyan',
