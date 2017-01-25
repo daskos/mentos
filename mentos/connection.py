@@ -177,8 +177,7 @@ class Connection(object):
 
                 # yield self.(msg)
             except Exception as ex:
-                log.warn(
-                    "Problem parsing response from endpoint. Might be a subscription error")
+                log.warn("Problem parsing response from endpoint. Might be a subscription error",ex)
 
     def close(self):
         if self.closing:

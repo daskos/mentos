@@ -7,7 +7,7 @@ from mentos import subscription
 from mentos.utils import encode_data
 from subprocess import Popen,PIPE
 
-@pytest.mark.gen_test(run_sync=True, timeout=100)
+@pytest.mark.gen_test(run_sync=True, timeout=200)
 def test_subscription(io_loop, mocker):
     subm = {
         "user": "Test",
@@ -41,12 +41,11 @@ def test_subscription(io_loop, mocker):
 
     assert sub.state.current_state == states.States.SUBSCRIBED
 
-    assert handler.call_count >=3
+    assert handler.call_count >=2
     assert "id" in sub.framework
 
     assert handler.call_args_list[0][0][0]["framework_id"] == sub.framework["id"]
     assert handler.call_args_list[1][0][0]["type"] == "HEARTBEAT"
-    assert handler.call_args_list[2][0][0].get("offers",None) != None
 
     first_id = sub.framework["id"]
     first_mesos_id = sub.mesos_stream_id
