@@ -145,6 +145,9 @@ class Connection(object):
                 if b"Failed to" in chunk:
                     log.warn("Got error from Master: %s" % chunk.decode())
                     return
+                if b"No leader elected" in chunk:
+                    log.warn(chunk.decode())
+                    return
                 self.buffer.append(chunk)
                 length = self.buffer[0].split(b'\n', 1)[0]
                 number = -len(length)

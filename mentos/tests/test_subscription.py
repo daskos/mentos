@@ -82,9 +82,9 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    yield gen.sleep(5)
+    yield gen.sleep(15)
 
-    time.sleep(20)
+    time.sleep(30)
 
     assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
