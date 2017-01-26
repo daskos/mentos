@@ -5,6 +5,7 @@ from mentos import utils,exceptions as exc
 import six
 import socket
 from subprocess import Popen, PIPE
+from tornado import gen
 import time
 
 
@@ -150,7 +151,7 @@ def test_master_info_zk():
     a = p.wait()
 
     yield gen.sleep(20)
-    
+
     url_again = yield master.get_endpoint()
 
     assert url_again != None
