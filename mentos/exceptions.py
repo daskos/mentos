@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 import socket
 
 try:
- 	ConnectionRefusedError
+    ConnectionRefusedError = ConnectionRefusedError
 except NameError:
 	ConnectionRefusedError = socket.error
 
