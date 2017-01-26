@@ -89,7 +89,7 @@ def test_subscription(io_loop, mocker):
 
     yield gen.sleep(random.randint(1,5))
 
-    time.sleep(random.randint(10,30))
+   # time.sleep(random.randint(10,30))
 
     assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
