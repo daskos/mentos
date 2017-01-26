@@ -85,7 +85,7 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    time.sleep(20)
+    yield gen.sleep(20)
 
 
     yield sub.ensure_safe([states.States.SUBSCRIBED])
