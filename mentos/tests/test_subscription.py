@@ -75,8 +75,10 @@ def test_subscription(io_loop, mocker):
 
     if sub.master_info.info["port"] == 5050:  # pragma: no cover
         active = "mesos_master_0"
-    else:
+    elif sub.master_info.info["port"] == 6060:  # pragma: no cover
         active = "mesos_master_1"
+    else:
+        active = "mesos_master_2"
 
     p = Popen(["docker-compose restart %s" % active], shell=True,
               stdout=PIPE, stderr=PIPE)
@@ -85,7 +87,7 @@ def test_subscription(io_loop, mocker):
 
     yield gen.sleep(random.randint(1,5))
 
-    time.sleep(random.randint(10,30))
+    time.sleep(random.randint(20,40))
 
     assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
@@ -119,7 +121,7 @@ def test_subscription(io_loop, mocker):
 
 
 
-@pytest.mark.gen_test(run_sync=True, timeout=100)
+@pytest.mark.gen_test(run_sync=True, timeout=600)
 def test_bad_subscription(io_loop, mocker):
     subm = {
 

@@ -115,7 +115,7 @@ def test_master_info_zk():
 
     assert master.info["ip"] != None
 
-    assert master.info["port"] in (5050,6060)
+    assert master.info["port"] in (5050,6060,7070)
 
     with pytest.raises(exc.NoRedirectException):
         master.redirected_uri("localhost:9092")
@@ -132,13 +132,15 @@ def test_master_info_zk():
 
     assert master.info["ip"] != None
 
-    assert master.info["port"] in (5050, 6060)
+    assert master.info["port"] in (5050, 6060,7070)
 
 
     if master.info["port"] == 5050:# pragma: no cover
         active = "mesos_master_0"
-    else:# pragma: no cover
+    elif master.info["port"] == 6060:# pragma: no cover
         active = "mesos_master_1"
+    else:
+        active = "mesos_master_2"
 
 
     old_info = master.info.copy()
@@ -160,7 +162,7 @@ def test_master_info_zk():
 
     assert master.info["ip"] != None
 
-    assert master.info["port"] in set([5050, 6060]) - set([old_info["port"]])
+    assert master.info["port"] in set([5050, 6060,7070]) - set([old_info["port"]])
 
 
 
