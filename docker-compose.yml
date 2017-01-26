@@ -31,20 +31,6 @@ services:
       - MESOS_REGISTRY=in_memory
       - MESOS_PORT=6060
     restart: "always"
-  mesos_master_2:
-    network_mode: "host"
-    image: mesosphere/mesos-master:1.1.0-2.0.107.ubuntu1404
-    environment:
-      - MESOS_LOGGING_LEVEL=ERROR
-      - MESOS_IP=127.0.0.1
-      - MESOS_HOSTNAME=localhost
-      - MESOS_ZK=zk://127.0.0.1:2181/mesos
-      - MESOS_QUORUM=1
-      - MESOS_CLUSTER=test
-      - MESOS_REGISTRY=in_memory
-      - MESOS_PORT=7070
-    restart: "always"
-  
   mesos_slave_0:
     network_mode: "host"
     image: mesosphere/mesos-slave:1.1.0-2.0.107.ubuntu1404
