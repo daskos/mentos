@@ -5,7 +5,7 @@ from collections import deque
 
 from mentos.connection import Connection
 from mentos.exceptions import (BadMessage, BadSubscription, ConnectError,
-                               ConnectionLost, MasterRedirect, NoLeadingMaster)
+                               ConnectionLost, MasterRedirect, NoLeadingMaster,ConnectionRefusedError)
 from mentos.retry import RetryPolicy
 from mentos.states import SessionStateMachine, States
 from mentos.utils import MasterInfo, log_errors

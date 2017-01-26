@@ -1,5 +1,11 @@
 
 from __future__ import unicode_literals
+import socket
+
+try:
+ 	ConnectionRefusedError
+except NameError:
+	ConnectionRefusedError = socket.error
 
 
 class MesosError(Exception):

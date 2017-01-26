@@ -85,11 +85,10 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    time.sleep(5)
+    time.sleep(20)
 
-    assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
-    #yield sub.ensure_safe([states.States.SUBSCRIBED])
+    yield sub.ensure_safe([states.States.SUBSCRIBED])
 
     assert sub.state.current_state == states.States.SUBSCRIBED
 

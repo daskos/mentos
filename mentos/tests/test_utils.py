@@ -149,7 +149,7 @@ def test_master_info_zk():
 
     a = p.wait()
 
-    time.sleep(5)
+    time.sleep(20)
     url_again = yield master.get_endpoint()
 
     assert url_again != None

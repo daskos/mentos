@@ -6,7 +6,7 @@ import logging
 from collections import deque
 
 from mentos.exceptions import (BadSubscription, ConnectError, ConnectionLost,
-                               MasterRedirect)
+                               MasterRedirect,ConnectionRefusedError)
 from mentos.utils import decode, encode, log_errors
 from six import raise_from
 from six.moves.urllib.parse import urlparse
