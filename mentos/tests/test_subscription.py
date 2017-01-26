@@ -73,7 +73,7 @@ def test_subscription(io_loop, mocker):
     assert resp.code == 202
     assert resp.effective_url == sub.connection.endpoint+sub.api_path
 
-    time.sleep(random.randint(1, 20))
+    yield gen.sleep(random.randint(random.randint(5, 10)))
 
     if sub.master_info.info["port"] == 5050:  # pragma: no cover
         active = "mesos_master_0"
@@ -87,13 +87,13 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    yield gen.sleep(random.randint(1,5))
+    yield gen.sleep(random.randint(random.randint(5,10)))
 
-   # time.sleep(random.randint(10,30))
+    #time.sleep(random.randint(10,30))
 
     assert sub.state.current_state in (states.States.SUSPENDED,states.States.SUBSCRIBING)
 
-    yield sub.ensure_safe([states.States.SUBSCRIBED])
+    #yield sub.ensure_safe([states.States.SUBSCRIBED])
 
     assert sub.state.current_state == states.States.SUBSCRIBED
 
