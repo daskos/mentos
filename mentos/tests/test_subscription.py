@@ -8,7 +8,7 @@ from mentos.utils import encode_data
 from subprocess import Popen,PIPE
 import time
 import random
-@pytest.mark.gen_test(run_sync=False, timeout=200)
+@pytest.mark.gen_test(run_sync=False, timeout=600)
 def test_subscription(io_loop, mocker):
     subm = {
         "user": "Test",
