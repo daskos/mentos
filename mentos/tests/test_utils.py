@@ -150,7 +150,8 @@ def test_master_info_zk():
 
     a = p.wait()
 
-    yield gen.sleep(20)
+    time.sleep(20)
+    yield gen.sleep(5)
 
     url_again = yield master.get_endpoint()
 
