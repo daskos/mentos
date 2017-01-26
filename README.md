@@ -45,7 +45,15 @@ Requirements:
 An example Mesos Scheduler and Executor can be found in the examples folder. It runs one task and then starts declining offers. The Task basically transmits and prints a message. Excuse the magic.
 
 ## Tests
-Not full coverage yet. Working on it
+- [x] utils
+- [x] states
+- [x] interface
+- [x] retry
+- [x] exceptions
+- [x] connection
+- [x] subscription
+- [ ] executor
+- [ ] scheduler
 
 ## Documentation
 Not there yet
