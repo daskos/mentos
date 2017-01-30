@@ -25,6 +25,8 @@ before_install:
 - docker-compose up -d
 - docker ps -a
 - docker images
+- sudo apt-get install pandoc
+- pip install pypandoc
 install:
 - which python
 script:
@@ -34,7 +36,7 @@ after_success:
 - coveralls
 
 before_deploy:
-- pip install coveralls
+- pip install pypandoc
 deploy:
   - provider: pypi
     distributions: "sdist bdist_wheel"
@@ -54,7 +56,6 @@ deploy:
     on:
       branch: master
       tags: true
-      distributions: "sdist bdist_wheel"
       repo: Arttii/mentos
     skip_cleanup: true
 
