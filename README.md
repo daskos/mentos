@@ -52,8 +52,8 @@ An example Mesos Scheduler and Executor can be found in the examples folder. It 
 - [x] exceptions
 - [x] connection
 - [x] subscription
-- [ ] executor
-- [ ] scheduler
+- [x] executor
+- [x] scheduler
 
 ## Documentation
 Not there yet

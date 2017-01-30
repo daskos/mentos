@@ -4,7 +4,7 @@ import socket
 
 try:
     ConnectionRefusedError = ConnectionRefusedError
-except NameError:
+except NameError:# pragma: no cover
 	ConnectionRefusedError = socket.error
 
 

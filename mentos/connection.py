@@ -55,7 +55,7 @@ class Connection(object):
                 self._headers.parse_line(response)
             if self.connection_successful and "Mesos-Stream-Id" in self._headers:
                 self.mesos_stream_id = self._headers["Mesos-Stream-Id"].strip()
-        except ValueError as ex:
+        except ValueError as ex:# pragma: no cover
             log.warn("Problem parsing headers")
 
     @gen.coroutine
@@ -86,16 +86,16 @@ class Connection(object):
             if ex.code == 400:
                 raise_from(BadSubscription(
                     "Got a 400 code from endpoint. Probably bad subscription request"), ex)
-        except ConnectionRefusedError as ex:
+        except ConnectionRefusedError as ex:# pragma: no cover
             log.error("Problem subscribing: %s" % self.endpoint)
-        except Exception as ex:
+        except Exception as ex:# pragma: no cover
             log.error("Unhandled exception")
             log.exception(ex)
 
     def send(self, request):
         f = concurrent.Future()
 
-        if self.closing:
+        if self.closing:# pragma: no cover
             f.set_exception(ConnectError(self.endpoint))
             return f
 
@@ -125,19 +125,19 @@ class Connection(object):
         )
         try:
             yield self.outbound_client.fetch(request)
-        except HTTPError as ex:
+        except HTTPError as ex:# pragma: no cover
             if ex.code == 307:
                 raise_from(MasterRedirect(
                     urlparse(ex.response.headers["location"]).netloc), None)
-        except ConnectionRefusedError as ex:
+        except ConnectionRefusedError as ex:# pragma: no cover
             log.debug("Problem reaching: %s" % self.endpoint)
             raise ex
-        except Exception as ex:
+        except Exception as ex:# pragma: no cover
             log.debug("Unhandled exception when connecting to %s",
                       self.endpoint)
             raise ex
 
-    def _handle_chunks(self, chunk):
+    def _handle_chunks(self, chunk):# pragma: no cover
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:

@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 class SchedulerDriver(object):
 
     def __init__(self, scheduler, name, user=getpass.getuser(),
-                 master=os.getenv('MESOS_MASTER', 'localhost'),
+                 master=os.getenv('MESOS_MASTER', 'zk://localhost:2181'),
                  failover_timeout=100, capabilities=None,
                  implicit_acknowledgements=True, handlers={}, loop=None):
         self.loop = loop or IOLoop()
@@ -56,28 +56,31 @@ class SchedulerDriver(object):
     def start(self, block=False, **kwargs):
         """ Start scheduler running in separate thread """
         log.debug("Starting scheduler")
-        if hasattr(self, '_loop_thread'):
-            return
+        # if hasattr(self, '_loop_thread'):
+        #     if not self._loop_thread._is_stopped:
+        #         return
         if not self.loop._running:
 
             self._loop_thread = Thread(target=self.loop.start)
             self._loop_thread.daemon = True
             self._loop_thread.start()
-            while not self.loop._running:
+            while not self.loop._running:# pragma: no cover
                 sleep(0.001)
 
         self.loop.add_callback(self.subscription.start)
-        if block:
+        if block:# pragma: no cover
             self._loop_thread.join()
 
     def stop(self):
         """ stop
         """
         log.debug("Terminating Scheduler Driver")
-        self.subscription.close()
-        self.loop.add_callback(self.loop.stop)
-        while self.loop._running:
-            sleep(0.1)
+        if self.subscription:
+            self.subscription.close()
+        if self.loop:
+            self.loop.add_callback(self.loop.stop)
+            while self.loop._running:
+                sleep(0.1)
 
     def request(self, requests):
         """
@@ -134,7 +137,7 @@ class SchedulerDriver(object):
             log.debug("Reconciling all tasks ")
         if payload:
             self.loop.add_callback(self.subscription.send, payload)
-        else:
+        else:# pragma: no cover
             log.debug("Agent and Task not set")
 
     def decline(self, offer_ids, filters=None):
@@ -167,7 +170,8 @@ class SchedulerDriver(object):
         }]
         self.accept(offer_ids, operations, filters=filters)
 
-        log.debug('Launching {} with filters '.format(operations, filters))
+        log.debug('Launching operations {} with filters {}'.format(
+            operations, filters))
 
     def accept(self, offer_ids, operations, filters=None):
         """
@@ -331,7 +335,7 @@ class SchedulerDriver(object):
                 self, executor_id,
                 agent_id, status
             )
-        log.debug("Lost executor %s on agent %s" % (executor_id, agent_id))
+            log.debug("Lost executor %s on agent %s" % (executor_id, agent_id))
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (
@@ -350,6 +354,6 @@ class SchedulerDriver(object):
         log.debug("Exited context manager")
         self.stop()
 
-    def __del__(self):
+    def __del__(self):# pragma: no cover
         log.debug("Deleting scheduler")
         self.stop()

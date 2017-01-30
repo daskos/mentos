@@ -77,7 +77,7 @@ def test_subscription(io_loop, mocker):
         active = "mesos_master_0"
     elif sub.master_info.info["port"] == 6060:  # pragma: no cover
         active = "mesos_master_1"
-    else:
+    else:# pragma: no cover
         active = "mesos_master_2"
 
     p = Popen(["docker-compose restart %s" % active], shell=True,

@@ -140,7 +140,7 @@ def test_master_info_zk():
         active = "mesos_master_0"
     elif master.info["port"] == 6060:# pragma: no cover
         active = "mesos_master_1"
-    else:
+    else:# pragma: no cover
         active = "mesos_master_2"
 
 

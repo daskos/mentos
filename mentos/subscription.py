@@ -124,11 +124,11 @@ class Subscription(object):
 
             try:
                 endpoint = yield self.master_info.get_endpoint()
-            except NoLeadingMaster as ex:
+            except NoLeadingMaster as ex:# pragma: no cover
                 self.connection = None
                 endpoint = None
 
-            if not endpoint:
+            if not endpoint:# pragma: no cover
                 yield retry_policy.enforce()
 
             conn = yield self.make_connection(endpoint, self.api_path)
@@ -180,10 +180,10 @@ class Subscription(object):
         conn = Connection(endpoint,api_path, self._event_handler)
         try:
             yield conn.ping()
-        except MasterRedirect as ex:
+        except MasterRedirect as ex:# pragma: no cover
             if ex.location == self.master_info.current_location:
                 log.warn("Leading Master not elected yet")
-            else:
+            else:# pragma: no cover
                 log.warn("Master not leading")
                 self.master_info.redirected_uri(ex.location)
             conn = None
@@ -247,7 +247,7 @@ class Subscription(object):
         self.closing = True
 
         if self.master_info.detector:
-            log.warn("Closing Subscription Master Detector")
+            log.debug("Closing Subscription Master Detector")
             self.loop.add_callback(self.master_info.detector.close)
         if self.connection:
             self.connection.close()

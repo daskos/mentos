@@ -29,10 +29,10 @@ class ExecutorDriver():
         """
         self.loop = loop or IOLoop()
 
-        self.master = env.get('MESOS_AGENT_ENDPOINT', "")
+        self.master = env.get('MESOS_AGENT_ENDPOINT')
 
-        self.framework_id = dict(value=env.get('MESOS_FRAMEWORK_ID', ""))
-        self.executor_id = dict(value=env.get('MESOS_EXECUTOR_ID', ""))
+        self.framework_id = dict(value=env.get('MESOS_FRAMEWORK_ID'))
+        self.executor_id = dict(value=env.get('MESOS_EXECUTOR_ID'))
 
         self.framework = {
             "framework_id": self.framework_id,
@@ -40,13 +40,13 @@ class ExecutorDriver():
         }
 
         grace_shutdown_period = env.get('MESOS_EXECUTOR_SHUTDOWN_GRACE_PERIOD')
-        if grace_shutdown_period:
+        if grace_shutdown_period:# pragma: no cover
             self.grace_shutdown_period = parse_duration(grace_shutdown_period)
         else:
             self.grace_shutdown_period = 0.0
 
         self.checkpoint = bool(env.get('MESOS_CHECKPOINT'))
-        self.local = bool(env.get('MESOS_LOCAL'))
+        self.local = bool(env.get('MESOS_LOCAL',True))
 
         self.executor = executor
         self.framework_info = None
@@ -73,18 +73,18 @@ class ExecutorDriver():
 
     def start(self, block=False, **kwargs):
         """ Start executor running in separate thread """
-        if hasattr(self, '_loop_thread'):
-            return
+        # if hasattr(self, '_loop_thread'):
+        #     return
         if not self.loop._running:
 
             self._loop_thread = Thread(target=self.loop.start)
             self._loop_thread.daemon = True
             self._loop_thread.start()
-            while not self.loop._running:
+            while not self.loop._running:# pragma: no cover
                 sleep(0.001)
 
         self.loop.add_callback(self.subscription.start)
-        if block:
+        if block:# pragma: no cover
             self._loop_thread.join()
 
     def stop(self):
@@ -93,7 +93,7 @@ class ExecutorDriver():
         log.debug("Terminating Scheduler Driver")
         self.subscription.close()
         self.loop.add_callback(self.loop.stop)
-        while self.loop._running:
+        while self.loop._running:# pragma: no cover
             sleep(0.1)
 
     def update(self, status):
@@ -138,10 +138,10 @@ class ExecutorDriver():
         executor_info = info['executor_info']
         framework_info = info['framework_info']
         agent_info = info['agent_info']
-        if executor_info['executor_id'] != self.executor_id:
+        if executor_info['executor_id'] != self.executor_id:# pragma: no cover
             raise ExecutorException("Mismatched executor_id's")
 
-        if framework_info['id'] != self.framework_id:
+        if framework_info['id'] != self.framework_id:# pragma: no cover
             raise ExecutorException("Mismatched framework_ids")
 
         if self.executor_info is None or self.framework_info is None:
@@ -151,23 +151,23 @@ class ExecutorDriver():
                 self, executor_info,
                 self.framework_info, agent_info
             )
-        else:
+        else:# pragma: no cover
             self.executor.on_reregistered(self, agent_info)
 
         log.debug("Subscribed with info {}".format(info))
 
     def on_close(self):
         if not self.checkpoint:
-            if not self.local:
+            if not self.local:# pragma: no cover
                 self._delay_kill()
-            self.executor.shutdown(self)
+            self.executor.on_shutdown(self)
 
         log.debug("Got close command")
 
     def on_launch_group(self, event):
         task_info = event['task']
         task_id = task_info['task_id']['value']
-        if task_id in self.subscription.tasks:
+        if task_id in self.subscription.tasks:# pragma: no cover
             raise ExecutorException("Task Exists")
         self.subscription.tasks[task_id] = task_info
         self.executor.on_launch(self, task_info)
@@ -195,6 +195,7 @@ class ExecutorDriver():
         uuid_ = uuid.UUID(bytes=decode_data(event['uuid']))
         self.subscription.updates.pop(uuid_, None)
         self.subscription.tasks.pop(task_id, None)
+        self.executor.on_acknowledged(self, task_id,uuid_)
         log.debug("Got acknowledge {}".format(event))
 
     def on_message(self, event):
@@ -207,17 +208,17 @@ class ExecutorDriver():
         log.debug("Got error {}".format(event))
 
     def on_shutdown(self):
-        if not self.local:
+        if not self.local:# pragma: no cover
             self._delay_kill()
         self.executor.on_shutdown(self)
         log.debug("Got Shutdown command")
         self.stop()
 
-    def _delay_kill(self):
+    def _delay_kill(self):# pragma: no cover
         def _():
             try:
                 time.sleep(self.grace_shutdown_period)
-                os.killpg(0, signal.SIGKILL)
+                os._exit(os.EX_OK)
             except Exception:
                 log.exception('Failed to force kill executor')
 
@@ -227,7 +228,7 @@ class ExecutorDriver():
 
     def __str__(self):
         return '<%s: executor="%s:%s:%s">' % (
-            self.__class__.__name__, self.master, self.framework_id,
-            self.agent_endpoint)
+            self.__class__.__name__, self.master,
+            self.subscription.master_info.info, self.framework)
 
     __repr__ = __str__
