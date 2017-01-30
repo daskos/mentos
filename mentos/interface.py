@@ -199,7 +199,7 @@ class Scheduler(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         message: string
             Arbitrary byte stream
         """
@@ -210,7 +210,7 @@ class Scheduler(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         response: Response
             Tornado response object
         """
@@ -221,7 +221,7 @@ class Scheduler(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         response: Response
             Tornado response object
         """
@@ -242,7 +242,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         executor: Executor
             The unique identifier of the lost Mesos executor
         framework: Framework
@@ -258,7 +258,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         slave: Slave
             TODO: write docs
         """
@@ -271,7 +271,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
@@ -284,7 +284,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         task: Task
             TODO: write docs
         """
@@ -299,7 +299,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         task_id: string
             Unique identifier of the killed task
         """
@@ -313,7 +313,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         message: string
             Arbitrary byte stream
         """
@@ -329,7 +329,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
@@ -340,7 +340,7 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         message: string
             Arbitrary byte stream
         """
@@ -351,18 +351,32 @@ class Executor(object):
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         response: Response
             Tornado response object
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
+
+    def on_acknowledged(self,driver, task_id, uuid):  # pragma: no cover
+        """Event handler triggered when a task update has successfully been acknowledged
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Agent
+        task_id: string
+            Mesos Task ID
+        uuid: UUID
+            Acknowledge UUID
+        """
+        log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
+
+    on_acknowledged
 
     def on_outbound_success(self, driver, response):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Executor
         Parameters
         ----------
         driver: ExecutorDriver
-            Interface for interacting with Mesos Slave
+            Interface for interacting with Mesos Agent
         response: Response
             Tornado response object
         """
