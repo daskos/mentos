@@ -29,10 +29,10 @@ def test_subscription(io_loop, mocker):
     assert sub.state.current_state == states.States.CLOSED
     yield sub.start()
 
-    yield sub.ensure_safe([states.States.SUBSCRIBING])
+    yield sub.ensure_safe([states.States.SUBSCRIBING,states.States.SUBSCRIBED])
 
 
-    assert sub.state.current_state == states.States.SUBSCRIBING
+    assert sub.state.current_state in [states.States.SUBSCRIBING,states.States.SUBSCRIBED]
 
     assert "framework_id" not in sub.framework
     assert sub.connection != None

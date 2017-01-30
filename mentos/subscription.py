@@ -226,7 +226,8 @@ class Subscription(object):
                 if "framework_id" in message["subscribed"]:
                     self.framework["id"] = message[
                         "subscribed"]["framework_id"]
-                if self.state.current_state==States.SUBSCRIBING:
+                # Add special check to ensure subscribed for executor
+                if self.state.current_state==States.SUBSCRIBING and "executor_info" in message["subscribed"]:
                     self.state.transition_to(States.SUBSCRIBED)
 
             if message["type"] in self.event_handlers:
