@@ -18,6 +18,11 @@ setup(name='mentos',
       packages=['mentos'],
       long_description=(open('README.md').read() if exists('README.md')
                         else ''),
+      classifiers=[
+            "Intended Audience :: Developers",
+            "Programming Language :: Python :: 2.7",
+            "Programming Language :: Python :: 3",
+      ],
       install_requires=['zoonado', 'tornado', 'six', 'toolz'],
       setup_requires=['pytest-runner'],
       tests_require=['pytest-mock', 'pytest', 'mock', 'pytest-tornado','pytest-cov'],
