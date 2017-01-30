@@ -5,6 +5,13 @@ from os.path import exists
 
 from setuptools import setup
 
+try:
+   import pypandoc
+   description = pypandoc.convert('README.md', 'rst')
+except (IOError, ImportError):
+   description = ''
+
+
 setup(name='mentos',
       version='0.1.5',
       description='Fresh Python Mesos HTTP Scheduler and Executor',
@@ -16,8 +23,7 @@ setup(name='mentos',
       license='Apache License, Version 2.0',
       keywords='mesos scheduler executor http',
       packages=['mentos'],
-      long_description=(open('README.md').read() if exists('README.md')
-                        else ''),
+      long_description=description,
       classifiers=[
             "Intended Audience :: Developers",
             'License :: OSI Approved :: Apache Software License',
@@ -25,6 +31,6 @@ setup(name='mentos',
             "Programming Language :: Python :: 3",
       ],
       install_requires=['zoonado', 'tornado', 'six', 'toolz'],
-      setup_requires=['pytest-runner'],
+      setup_requires=['pytest-runner','pypandoc'],
       tests_require=['pytest-mock', 'pytest', 'mock', 'pytest-tornado','pytest-cov'],
       zip_safe=True)
