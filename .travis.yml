@@ -32,6 +32,9 @@ script:
 after_success:
 - pip install coveralls
 - coveralls
+
+before_deploy:
+- pip install coveralls
 deploy:
   - provider: pypi
     distributions: "sdist bdist_wheel"
