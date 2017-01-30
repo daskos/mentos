@@ -39,8 +39,7 @@ class Scheduler(object):
         master : Master
             Information about the master itself
         """
-        log.debug("Method {function} not implemented".format(
-            sys._getframe().f_code.co_name))
+        log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
     def on_disconnected(self, driver):# pragma: no cover
         """Event handler triggereg when the scheduler becomes disconnected from

@@ -91,7 +91,8 @@ class Subscription(object):
         while not getattr(self.connection, 'mesos_stream_id', None):
             yield gen.sleep(0.1)
         self.mesos_stream_id = self.connection.mesos_stream_id
-        self.state.transition_to(States.SUBSCRIBED)
+        if self.state.current_state == States.SUBSCRIBING:
+            self.state.transition_to(States.SUBSCRIBED)
 
     @gen.coroutine
     def start(self):
@@ -225,6 +226,8 @@ class Subscription(object):
                 if "framework_id" in message["subscribed"]:
                     self.framework["id"] = message[
                         "subscribed"]["framework_id"]
+                if self.state.current_state==States.SUBSCRIBING:
+                    self.state.transition_to(States.SUBSCRIBED)
 
             if message["type"] in self.event_handlers:
                 _type = message['type']

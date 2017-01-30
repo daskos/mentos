@@ -35,6 +35,7 @@ class ExecutorDriver():
         self.executor_id = dict(value=env.get('MESOS_EXECUTOR_ID'))
 
         self.framework = {
+            "id": self.framework_id,
             "framework_id": self.framework_id,
             "executor_id": self.executor_id
         }
