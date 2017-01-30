@@ -11,7 +11,6 @@ try:
 except ImportError:
     print("warning: pypandoc module not found, could not convert Markdown to RST")
     read_md = lambda f: open(f, 'r').read()
-
 setup(name='mentos',
       version='0.1.5',
       description='Fresh Python Mesos HTTP Scheduler and Executor',

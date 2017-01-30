@@ -47,6 +47,7 @@ deploy:
     on:
       branch: master
       tags: false
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
     skip_cleanup: true
   - provider: pypi
     distributions: "sdist bdist_wheel"
@@ -57,5 +58,7 @@ deploy:
       branch: master
       tags: true
       repo: Arttii/mentos
+      condition: $TRAVIS_PYTHON_VERSION = "2.7"
     skip_cleanup: true
+
 
