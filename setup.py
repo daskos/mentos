@@ -6,11 +6,11 @@ from os.path import exists
 from setuptools import setup
 
 try:
-   import pypandoc
-   description = pypandoc.convert('README.md', 'rst')
-except (IOError, ImportError):
-   description = ''
-
+    from pypandoc import convert
+    read_md = lambda f: convert(f, 'rst')
+except ImportError:
+    print("warning: pypandoc module not found, could not convert Markdown to RST")
+    read_md = lambda f: open(f, 'r').read()
 
 setup(name='mentos',
       version='0.1.5',
@@ -23,7 +23,7 @@ setup(name='mentos',
       license='Apache License, Version 2.0',
       keywords='mesos scheduler executor http',
       packages=['mentos'],
-      long_description=description,
+      long_description=read_md('README.md'),
       classifiers=[
             "Intended Audience :: Developers",
             'License :: OSI Approved :: Apache Software License',
