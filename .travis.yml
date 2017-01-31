@@ -34,28 +34,28 @@ script:
 after_success:
 - pip install coveralls
 - coveralls
-
 before_deploy:
 - pip install pypandoc
 deploy:
   - provider: pypi
     distributions: "sdist bdist_wheel"
     server: https://testpypi.python.org/pypi
-    user: arttii
+    user: daskos
     password:
-      secure: XG3Aa1OD989yHI6XyAkjPsX472JIrpRvYSYZ7tUnVeVE0Db2t0Fpi7hwcPISkEmWvp+XgjBnxdMn+nBvM90bVGvIA7ufJF3owMBPs5H7+/LdjcjGwxrJHqyVPMgH6pd6vJv43E09zqYroihD1BfMD+FQp9j31UNBj7ewrBRRWpgIlXlb8T1diG/CUZqSYFZ8bGJTY1goC/X6IBjvuHsX/tgeeMiko8/WlEcKu0XeBo7uEWByC/rTMqQcZqghc942wnEzUdc9HnNmjOq5QGc2/82o8pUq/xpHA3eXs3/sfFXe4PuorrrL3nBgQeAnUVPbyV7uG2fb2XEPPz0x3T3smP1whReVjPC413uvGryNmP0CPNdlAZXhrTcfc3VYz1hLfC4aCqCdsOCylw9RPYfDdaQDRVc5Wb20+jlvnC1+oXwmv/jcpQ10KDGOgB0iicYM9d3GubZbE+Lxcw9PjuQxD5+0lwHCz4mdI/tjLgngvsgyrwI72Ngq4bFkxkVA3vuMpYJstsclIs7k+xtPc/5GimMpnTTdMyelSqTabb7GF6kOQCLeGIEdDkU9N6vTpnA9ZFt7e/n6Xu5bbvwtLD2WH56PzdF/l8MXj/63Cpi0cS6yNfYrI/1X6LQkLQ+iB7EHh/WSyyXKxMUGkC0sxT8OCly0ZMpgex0sLcj/1eaVf8E=
+      secure: K7Ic/pSDVhqY63iSatOpXig77WnMhIiRgU+zZKhAJHxwGFAbq4b4QfIxD8xKR4GwLm/vGpX285cKp1nuleAwLRj4GpOmVU2o1exZHO0HNFTpSsb9fb+lYWQIFB9WFdueiv/V0WmxR6sR2+iDGCy2itTg5pNuu2POr0olJga3ixsoS1EaxRQW4DOXciblTHBRZIPNQVMi823iacq7ovvJ/ZmSBDf6KOEbouqGSMYsbgywFRpqnTKDMYgU60Mov/ATkXNMkUye6ffIKJbr/UhhVgpnkhcRBAa0Hx2/BfA23CokiBFAusH3p8Ko8BMfUCnkZ8pJw2SJ/kXqeMn+SLMX6YqsAIYQSRE33mDtDJkK5XHP/MY3/soO3M+fPGtz3vIUmPB6ycH8INw+R0FUKnblGgRoNbmGF+MbrfnRXe5Qo09dUil859ySbIYfkYkadBbtn7MNEtbp6anaAJgYnBAQkWimT+uslEKM1AVqKQ/MvW+xBzmOkz3oZIFQsqkQS4O0vT/SlH2V1GMDfXG/R8heozMYNWSCLZM4PfocZY0GZIL1qEJV+z0Q3DwwqghHZ/2v+MR35r7iTPPd0Wf+LfK762IplM4/Va+nQ8DCbI5ZF7fO5OUUCgpZpaEGKLb8yHJqfiwZ42qzVtkJkobeyBkzyQmBzxe/zBE9US8cD7R0O6E=
     on:
       branch: master
       tags: false
       condition: $TRAVIS_PYTHON_VERSION = "2.7"
   - provider: pypi
     distributions: "sdist bdist_wheel"
-    user: arttii
+    user: daskos
     password:
-      secure: XG3Aa1OD989yHI6XyAkjPsX472JIrpRvYSYZ7tUnVeVE0Db2t0Fpi7hwcPISkEmWvp+XgjBnxdMn+nBvM90bVGvIA7ufJF3owMBPs5H7+/LdjcjGwxrJHqyVPMgH6pd6vJv43E09zqYroihD1BfMD+FQp9j31UNBj7ewrBRRWpgIlXlb8T1diG/CUZqSYFZ8bGJTY1goC/X6IBjvuHsX/tgeeMiko8/WlEcKu0XeBo7uEWByC/rTMqQcZqghc942wnEzUdc9HnNmjOq5QGc2/82o8pUq/xpHA3eXs3/sfFXe4PuorrrL3nBgQeAnUVPbyV7uG2fb2XEPPz0x3T3smP1whReVjPC413uvGryNmP0CPNdlAZXhrTcfc3VYz1hLfC4aCqCdsOCylw9RPYfDdaQDRVc5Wb20+jlvnC1+oXwmv/jcpQ10KDGOgB0iicYM9d3GubZbE+Lxcw9PjuQxD5+0lwHCz4mdI/tjLgngvsgyrwI72Ngq4bFkxkVA3vuMpYJstsclIs7k+xtPc/5GimMpnTTdMyelSqTabb7GF6kOQCLeGIEdDkU9N6vTpnA9ZFt7e/n6Xu5bbvwtLD2WH56PzdF/l8MXj/63Cpi0cS6yNfYrI/1X6LQkLQ+iB7EHh/WSyyXKxMUGkC0sxT8OCly0ZMpgex0sLcj/1eaVf8E=
+      secure: K7Ic/pSDVhqY63iSatOpXig77WnMhIiRgU+zZKhAJHxwGFAbq4b4QfIxD8xKR4GwLm/vGpX285cKp1nuleAwLRj4GpOmVU2o1exZHO0HNFTpSsb9fb+lYWQIFB9WFdueiv/V0WmxR6sR2+iDGCy2itTg5pNuu2POr0olJga3ixsoS1EaxRQW4DOXciblTHBRZIPNQVMi823iacq7ovvJ/ZmSBDf6KOEbouqGSMYsbgywFRpqnTKDMYgU60Mov/ATkXNMkUye6ffIKJbr/UhhVgpnkhcRBAa0Hx2/BfA23CokiBFAusH3p8Ko8BMfUCnkZ8pJw2SJ/kXqeMn+SLMX6YqsAIYQSRE33mDtDJkK5XHP/MY3/soO3M+fPGtz3vIUmPB6ycH8INw+R0FUKnblGgRoNbmGF+MbrfnRXe5Qo09dUil859ySbIYfkYkadBbtn7MNEtbp6anaAJgYnBAQkWimT+uslEKM1AVqKQ/MvW+xBzmOkz3oZIFQsqkQS4O0vT/SlH2V1GMDfXG/R8heozMYNWSCLZM4PfocZY0GZIL1qEJV+z0Q3DwwqghHZ/2v+MR35r7iTPPd0Wf+LfK762IplM4/Va+nQ8DCbI5ZF7fO5OUUCgpZpaEGKLb8yHJqfiwZ42qzVtkJkobeyBkzyQmBzxe/zBE9US8cD7R0O6E=
     on:
       tags: true
       repo: daskos/mentos
       condition: $TRAVIS_PYTHON_VERSION = "2.7"
+
 
 
