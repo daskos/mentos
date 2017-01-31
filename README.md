@@ -2,8 +2,8 @@
 # mentos - A Pure Python implementation of a Mesos Scheduler/Executor driver
 ###### Long Lasting Mesos freshness for Python
 
-[![Build Status](https://travis-ci.org/Arttii/mentos.svg?branch=master)](https://travis-ci.org/Arttii/mentos)
-[![Coverage Status](https://coveralls.io/repos/github/Arttii/mentos/badge.svg)](https://coveralls.io/github/Arttii/mentos)
+[![Build Status](https://travis-ci.org/daskos/mentos.svg?branch=master)](https://travis-ci.org/daskos/mentos)
+[![Coverage Status](https://coveralls.io/repos/github/daskos/mentos/badge.svg)](https://coveralls.io/github/daskos/mentos)
 
 The main goal is to provide a low-complexity and feature rich support for pure python Mesos Frameworks, but also to learn things.
 

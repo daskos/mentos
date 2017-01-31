@@ -369,8 +369,6 @@ class Executor(object):
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
-    on_acknowledged
-
     def on_outbound_success(self, driver, response):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Executor
         Parameters
