@@ -52,7 +52,7 @@ def test_subscription(io_loop, mocker):
     first_mesos_id = sub.mesos_stream_id
 
     assert sub.mesos_stream_id != None
-    yield sub.send({})
+    #yield sub.send({})
     #with pytest.raises(exc.BadMessage):
 
 
