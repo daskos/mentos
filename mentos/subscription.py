@@ -107,7 +107,7 @@ class Subscription(object):
     def subscription_loop(self):
         with log_errors():
             while not self.closing:
-                yield self.state.wait_for(States.CLOSED, States.SUSPENDED)
+                yield self.state.wait_for(States.CLOSED)
                 if self.closing:# pragma: no cover
                     break
 
@@ -171,7 +171,7 @@ class Subscription(object):
             log.warn("Lost connection to the Master, will try to resubscribe")
             self.connection.close()
             self.connection = None
-            self.state.transition_to(States.SUSPENDED)
+            self.state.transition_to(States.CLOSED)
 
         except BadSubscription as exc:
             log.warn("Bad Subscription request, aborting")
