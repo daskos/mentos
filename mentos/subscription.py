@@ -4,7 +4,7 @@ import logging
 from collections import deque
 
 from mentos.connection import Connection
-from mentos.exceptions import (BadMessage, BadSubscription, ConnectError,
+from mentos.exceptions import (BadMessage, BadSubscription, ConnectError,DetectorClosed,
                                ConnectionLost, MasterRedirect, NoLeadingMaster,ConnectionRefusedError,OutBoundError,FailedRetry,BadRequest)
 from mentos.retry import RetryPolicy
 from mentos.states import SessionStateMachine, States
@@ -107,7 +107,7 @@ class Subscription(object):
     def subscription_loop(self):
         with log_errors():
             while not self.closing:
-                yield self.state.wait_for(States.CLOSED)
+                yield self.state.wait_for(States.CLOSED, States.SUSPENDED)
                 if self.closing:# pragma: no cover
                     break
 
@@ -124,10 +124,13 @@ class Subscription(object):
 
         while not conn:
             yield self.retry_policy.enforce()
-
+            import tornado
             try:
                 endpoint = yield self.master_info.get_endpoint()
             except NoLeadingMaster as ex:# pragma: no cover
+                self.connection = None
+                endpoint = None
+            except DetectorClosed as ex:
                 self.connection = None
                 endpoint = None
 
@@ -171,7 +174,7 @@ class Subscription(object):
             log.warn("Lost connection to the Master, will try to resubscribe")
             self.connection.close()
             self.connection = None
-            self.state.transition_to(States.CLOSED)
+            self.state.transition_to(States.SUSPENDED)
 
         except BadSubscription as exc:
             log.warn("Bad Subscription request, aborting")

@@ -9,10 +9,10 @@ from subprocess import Popen,PIPE
 import time
 import random
 
-import logging
-
-logging.basicConfig(level=logging.DEBUG)
-
+# import logging
+#
+# logging.basicConfig(level=logging.DEBUG)
+#
 
 
 @pytest.mark.gen_test(run_sync=False, timeout=60)
@@ -59,7 +59,7 @@ def test_subscription(io_loop, mocker):
     first_mesos_id = sub.mesos_stream_id
 
     assert sub.mesos_stream_id != None
-    #yield sub.send({})
+    yield sub.send({})
     #with pytest.raises(exc.BadMessage):
 
 
@@ -92,8 +92,8 @@ def test_subscription(io_loop, mocker):
 
     a = p.wait()
 
-    time.sleep(20)
-    yield gen.sleep(5)
+
+    yield gen.sleep(20)
 
 
     yield sub.ensure_safe([states.States.SUBSCRIBED])

@@ -17,6 +17,7 @@ services:
       - MESOS_QUORUM=1
       - MESOS_CLUSTER=test
       - MESOS_REGISTRY=in_memory
+      - MESOS_PORT=5050
     restart: "always"
   mesos_master_1:
     network_mode: "host"

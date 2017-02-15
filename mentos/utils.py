@@ -5,7 +5,7 @@ import logging
 from binascii import a2b_base64, b2a_base64
 from contextlib import contextmanager
 
-from mentos.exceptions import NoLeadingMaster,NoRedirectException
+from mentos.exceptions import NoLeadingMaster,NoRedirectException,DetectorClosed
 from tornado import gen, ioloop
 from tornado.escape import json_decode, json_encode
 from zoonado import Zoonado
@@ -84,12 +84,13 @@ class MasterInfo(object):
         self.uri = uri
         self.seq = None
         self.info = {"address": {}}
+        self.closing = False
 
         if "zk://" in uri:
             log.warn("Using Zookeeper for Discovery")
             self.quorum = ",".join([zoo[zoo.index('://') + 3:]
                                     for zoo in self.uri.split(",")])
-            self.detector = Zoonado(self.quorum)
+            self.detector = Zoonado(self.quorum,session_timeout=6000)
 
             ioloop.IOLoop.current().add_callback(self.detector.start)
 
@@ -105,8 +106,11 @@ class MasterInfo(object):
 
     @gen.coroutine
     def get_endpoint(self, path=""):
+
+        if self.closing:
+            raise DetectorClosed("Detecor is closed")
+
         if self.detector:
-            ioloop.IOLoop.current().add_callback(self.detector.start)
 
             children = yield self.detector.get_children("/mesos")
             children = [child for child in children if child != 'log_replicas']
@@ -142,6 +146,9 @@ class MasterInfo(object):
             "http://{current_location}{path}".format(current_location=self.current_location, path=path))
 
     def close(self):
+        if self.closing:
+            return
+        self.closing = True
         def on_complete(self):
            log.debug("Closed detector")
         run_background(self.detector.close, on_complete)

@@ -11,6 +11,8 @@ except NameError:# pragma: no cover
 class MesosError(Exception):
     pass
 
+class DetectorClosed(Exception):
+    pass
 
 
 class BadRequest(MesosError):

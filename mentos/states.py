@@ -11,7 +11,7 @@ log = logging.getLogger(__name__)
 
 class States(object):
     SUBSCRIBED = "subscribed"
-    CLOSED = "CLOSED"
+    CLOSED = "closed"
     SUSPENDED = "suspended"
     SUBSCRIBING = "subscribing"
 
