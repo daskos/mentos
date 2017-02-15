@@ -15,7 +15,7 @@ import random
 #
 
 
-@pytest.mark.gen_test(run_sync=False, timeout=60)
+@pytest.mark.gen_test(run_sync=False, timeout=600)
 def test_subscription(io_loop, mocker):
     subm = {
         "user": "Test",
