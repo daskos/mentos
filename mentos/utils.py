@@ -24,6 +24,16 @@ def decode_data(data):
     return a2b_base64(data)
 
 
+from multiprocessing.pool import ThreadPool
+
+_workers = ThreadPool(10)
+
+def run_background(func, callback, args=(), kwds={}):
+    def _callback(result):
+        ioloop.IOLoop.instance().add_callback(lambda: callback(result))
+    _workers.apply_async(func, args, kwds, _callback)
+
+
 @contextmanager
 def log_errors(pdb=False):# pragma: no cover
     try:
@@ -96,6 +106,7 @@ class MasterInfo(object):
     @gen.coroutine
     def get_endpoint(self, path=""):
         if self.detector:
+            ioloop.IOLoop.current().add_callback(self.detector.start)
 
             children = yield self.detector.get_children("/mesos")
             children = [child for child in children if child != 'log_replicas']
@@ -116,7 +127,7 @@ class MasterInfo(object):
                 self.info["address"]["port"] = 5050
 
         log.debug(
-            "Found new leading Master, info={info}".format(info=self.info))
+            "Found new Master, info={info}".format(info=self.info))
 
         if "hostname" in self.info["address"]:
             host = self.info["address"]["hostname"]
@@ -129,6 +140,12 @@ class MasterInfo(object):
 
         raise gen.Return(
             "http://{current_location}{path}".format(current_location=self.current_location, path=path))
+
+    def close(self):
+        def on_complete(self):
+           log.debug("Closed detector")
+        run_background(self.detector.close, on_complete)
+
 
 
 def drain(iterable):

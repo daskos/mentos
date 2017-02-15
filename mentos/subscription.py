@@ -5,14 +5,15 @@ from collections import deque
 
 from mentos.connection import Connection
 from mentos.exceptions import (BadMessage, BadSubscription, ConnectError,
-                               ConnectionLost, MasterRedirect, NoLeadingMaster,ConnectionRefusedError)
+                               ConnectionLost, MasterRedirect, NoLeadingMaster,ConnectionRefusedError,OutBoundError,FailedRetry,BadRequest)
 from mentos.retry import RetryPolicy
 from mentos.states import SessionStateMachine, States
 from mentos.utils import MasterInfo, log_errors
 from tornado import gen
 from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
-
+from six import raise_from
+from time import sleep
 log = logging.getLogger(__name__)
 
 
@@ -32,7 +33,8 @@ class Event(object):
     LAUNCH = "LAUNCH"
     RESCIND_INVERSE_OFFER = "RESCIND_INVERSE_OFFER"
     CLOSE = "CLOSE"
-
+    OUTBOUND_SUCCESS = "OUTBOUND_SUCCESS"
+    OUTBOUND_ERROR = "OUTBOUND_ERROR"
 
 class Message(object):
     SUBSCRIBE = "SUBSCRIBE"
@@ -118,10 +120,10 @@ class Subscription(object):
     def detect_master(self):
         conn = None
 
-        retry_policy = RetryPolicy.exponential_backoff(maximum=self.timeout)
+        self.retry_policy = RetryPolicy.exponential_backoff(maximum=self.timeout)
 
         while not conn:
-            yield retry_policy.enforce()
+            yield self.retry_policy.enforce()
 
             try:
                 endpoint = yield self.master_info.get_endpoint()
@@ -130,7 +132,7 @@ class Subscription(object):
                 endpoint = None
 
             if not endpoint:# pragma: no cover
-                yield retry_policy.enforce()
+                yield self.retry_policy.enforce()
 
             conn = yield self.make_connection(endpoint, self.api_path)
 
@@ -196,27 +198,45 @@ class Subscription(object):
         raise gen.Return(conn)
 
     @gen.coroutine
-    def send(self, request):
+    def send(self, request,retry_policy=RetryPolicy.n_times(3)):
         response = None
         #wait for safe state
         yield self.state.wait_for(States.SUBSCRIBED)
+        errors = []
         while not response:
-            yield self.retry_policy.enforce(request)
-            yield self.ensure_safe()
             try:
+
+                yield retry_policy.enforce(request)
+                yield self.ensure_safe()
+
                 if "framework_id" not in request:
                     request["framework_id"] = self.framework["id"]
                 response = yield self.connection.send(request)
-                self.retry_policy.clear(request)
-            except ConnectError as ex:# pragma: no cover
-                self.state.transition_to(States.SUSPENDED)
-                log.error(ex)
             except HTTPError as ex:
-                exc = BadMessage("Bad call to Master, %s" %
-                                 ex.response.body.decode())
-                log.error(exc)
-                raise exc
+                if ex.code == 400:
+                    ex = BadRequest(ex.response.body)
+                    log.debug("Bad request {request}, {ex}".format(request=request,ex=ex))
+                    errors.append(ex)
+            except OutBoundError as ex:# pragma: no cover
+                #TODO question marc
+                #self.state.transition_to(States.SUSPENDED)
+                log.debug("Bad outbound message {request} because {ex}".format(request=request, ex=ex))
+                errors.append(ex)
+            except FailedRetry as ex:
+                log.error("Ran out of retries for {request}, last error {ex}".format(request=request,ex=errors[-1]))
+                self.outbound_error(OutBoundError(self.connection.endpoint, request, errors))
+                break
+            else:
+                retry_policy.clear(request)
+                self.outbound_succes(request)
+
         raise gen.Return(response)
+
+    def outbound_error(self,ex):
+        self._event_handler({"type": Event.OUTBOUND_ERROR,
+                             "outbound_error": {"request": ex.request, "endpoint": ex.endpoint, "error": ex.errors}})
+    def outbound_succes(self,request):
+        self._event_handler({"type": Event.OUTBOUND_SUCCESS, "outbound_success": {"request": request}})
 
     def _event_handler(self, message):
 
@@ -252,7 +272,10 @@ class Subscription(object):
 
         if self.master_info.detector:
             log.debug("Closing Subscription Master Detector")
-            self.loop.add_callback(self.master_info.detector.close)
+            self.master_info.close()
+            #self.loop.add_callback(self.master_info.detector.close,0.1)
+            # while self.master_info.detector.session.state.current_state!="CLOSED":  # pragma: no cover
+            #     sleep(0.1)
         if self.connection:
             self.connection.close()
         self.state.transition_to(States.CLOSED)

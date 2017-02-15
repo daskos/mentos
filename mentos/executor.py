@@ -63,7 +63,9 @@ class ExecutorDriver():
             Event.KILL: self.on_kill,
             Event.LAUNCH_GROUP: self.on_launch_group,
             Event.LAUNCH: self.on_launch,
-            Event.SHUTDOWN: self.on_shutdown
+            Event.SHUTDOWN: self.on_shutdown,
+            Event.OUTBOUND_SUCCESS: self.on_outbound_success,
+            Event.OUTBOUND_ERROR: self.on_outbound_error
         }, handlers or {})
 
         self.subscription = Subscription(self.framework, self.master, "/api/v1/executor",
@@ -214,6 +216,14 @@ class ExecutorDriver():
         self.executor.on_shutdown(self)
         log.debug("Got Shutdown command")
         self.stop()
+
+    def on_outbound_success(self, event):
+        self.executor.on_outbound_success(self, event["request"])
+        log.debug("Got success on outbound %s" % event)
+
+    def on_outbound_error(self, event):
+        self.executor.on_outbound_error(self, event["request"], event["endpoint"], event["error"])
+        log.debug("Got error on outbound %s" % event)
 
     def _delay_kill(self):# pragma: no cover
         def _():

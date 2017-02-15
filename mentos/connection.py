@@ -6,7 +6,7 @@ import logging
 from collections import deque
 
 from mentos.exceptions import (BadSubscription, ConnectError, ConnectionLost,
-                               MasterRedirect,ConnectionRefusedError)
+                               MasterRedirect,ConnectionRefusedError,OutBoundError)
 from mentos.utils import decode, encode, log_errors
 from six import raise_from
 from six.moves.urllib.parse import urlparse
@@ -89,7 +89,7 @@ class Connection(object):
         except ConnectionRefusedError as ex:# pragma: no cover
             log.error("Problem subscribing: %s" % self.endpoint)
         except Exception as ex:# pragma: no cover
-            log.error("Unhandled exception")
+            log.error("Unhandled exception in subscription connection")
             log.exception(ex)
 
     def send(self, request):
@@ -99,20 +99,28 @@ class Connection(object):
             f.set_exception(ConnectError(self.endpoint))
             return f
 
-        payload = encode(request)
-        headers = dict(self.headers)
-        headers['Content-Length'] = str(len(payload))
-        http_request = HTTPRequest(
-            url=self.endpoint + self.api_path,
-            body=payload,
-            method='POST',
-            headers=headers,
-        )
+        try:
+            payload = encode(request)
+            headers = dict(self.headers)
+            headers['Content-Length'] = str(len(payload))
+            http_request = HTTPRequest(
+                url=self.endpoint + self.api_path,
+                body=payload,
+                method='POST',
+                headers=headers,
+            )
+            if self.mesos_stream_id:
+                headers['Mesos-Stream-Id'] = self.mesos_stream_id
 
-        if self.mesos_stream_id:
-            headers['Mesos-Stream-Id'] = self.mesos_stream_id
+            return self.outbound_client.fetch(http_request)
+        except TypeError as ex:
+            log.debug( "Could not serialize message {request} because {ex}".format(request=request,ex=ex))
+            exc = OutBoundError(self.endpoint, request, ex)
+            raise_from(exc, ex)
+        except Exception as ex:  # pragma: no cover
+            log.error("Unhandled exception in outbound connection")
+            log.exception(ex)
 
-        return self.outbound_client.fetch(http_request)
 
     @gen.coroutine
     def ping(self, path=None):
@@ -142,7 +150,8 @@ class Connection(object):
         with log_errors():
             try:
                 log.debug("Buffer length %s" % len(self.buffer))
-                if b"Failed to" in chunk:
+                #TODO GOD #life
+                if b"Failed to" in chunk and b'type' not in chunk:
                     log.warn("Got error from Master: %s" % chunk.decode())
                     return
                 if b"No leader elected" in chunk:

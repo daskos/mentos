@@ -205,25 +205,29 @@ class Scheduler(object):
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
-    def on_outbound_error(self, driver, response):# pragma: no cover
+    def on_outbound_error(self, driver, request, endpoint, error):# pragma: no cover
         """Event handler triggered when an error has occured when sending data to the Master
         Parameters
         ----------
         driver: ExecutorDriver
             Interface for interacting with Mesos Agent
-        response: Response
-            Tornado response object
+        request: dict
+            Request sent to endpoint
+        endpoint: str
+            Endpoint
+        error: Exception
+            Raised exception
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
-    def on_outbound_success(self, driver, response):# pragma: no cover
+    def on_outbound_success(self, driver, request):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Master
         Parameters
         ----------
         driver: ExecutorDriver
             Interface for interacting with Mesos Agent
-        response: Response
-            Tornado response object
+        request: dict
+            Request sent to endpoint
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
@@ -346,16 +350,6 @@ class Executor(object):
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
-    def on_outbound_error(self, driver, response):# pragma: no cover
-        """Event handler triggered when an error has occured when sending data to the Executor
-        Parameters
-        ----------
-        driver: ExecutorDriver
-            Interface for interacting with Mesos Agent
-        response: Response
-            Tornado response object
-        """
-        log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
     def on_acknowledged(self,driver, task_id, uuid):  # pragma: no cover
         """Event handler triggered when a task update has successfully been acknowledged
@@ -369,13 +363,28 @@ class Executor(object):
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
 
-    def on_outbound_success(self, driver, response):# pragma: no cover
+    def on_outbound_error(self, driver, request, endpoint, error):  # pragma: no cover
+        """Event handler triggered when an error has occured when sending data to the Executor
+        Parameters
+        ----------
+        driver: ExecutorDriver
+            Interface for interacting with Mesos Agent
+        request: dict
+            Request sent to endpoint
+        endpoint: str
+            Endpoint
+        error: Exception
+            Raised exception
+        """
+        log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))
+
+    def on_outbound_success(self, driver, request):# pragma: no cover
         """Event handler triggered when a request was successful when sending data to the Executor
         Parameters
         ----------
         driver: ExecutorDriver
             Interface for interacting with Mesos Agent
-        response: Response
-            Tornado response object
+        request: dict
+            Request sent to endpoint
         """
         log.debug("{function} not implemented".format(function=sys._getframe().f_code.co_name))

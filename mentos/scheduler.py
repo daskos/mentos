@@ -8,7 +8,7 @@ from threading import Thread
 from time import sleep
 
 from mentos.subscription import Event, Subscription
-from mentos.utils import encode_data
+from mentos.utils import encode_data,run_background
 from toolz import merge
 from tornado.ioloop import IOLoop
 
@@ -20,7 +20,7 @@ class SchedulerDriver(object):
     def __init__(self, scheduler, name, user=getpass.getuser(),
                  master=os.getenv('MESOS_MASTER', 'zk://localhost:2181'),
                  failover_timeout=100, capabilities=None,
-                 implicit_acknowledgements=True, handlers={}, loop=None):
+                 implicit_acknowledgements=True, handlers=None, loop=None):
         self.loop = loop or IOLoop()
         self.master = master
         self.leading_master_seq = None
@@ -37,7 +37,7 @@ class SchedulerDriver(object):
 
         self.implicit_acknowledgements = implicit_acknowledgements
 
-        default_handlers = {Event.SUBSCRIBED: self.on_subscribed,
+        self.handlers = merge({Event.SUBSCRIBED: self.on_subscribed,
                             Event.OFFERS: self.on_offers,
                             Event.RESCIND: self.on_rescind,
                             Event.UPDATE: self.on_update,
@@ -45,8 +45,9 @@ class SchedulerDriver(object):
                             Event.RESCIND_INVERSE_OFFER: self.on_rescind_inverse,
                             Event.FAILURE: self.on_failure,
                             Event.ERROR: self.on_error,
-                            Event.HEARTBEAT: self.on_heartbeat}
-        self.handlers = merge(default_handlers, handlers)
+                            Event.HEARTBEAT: self.on_heartbeat,
+                            Event.OUTBOUND_SUCCESS: self.on_outbound_success,
+                            Event.OUTBOUND_ERROR: self.on_outbound_error}, handlers or {})
 
         self.subscription = Subscription(self.framework, self.master,
                                          "/api/v1/scheduler", self.handlers,
@@ -78,7 +79,11 @@ class SchedulerDriver(object):
         if self.subscription:
             self.subscription.close()
         if self.loop:
-            self.loop.add_callback(self.loop.stop)
+            def on_complete(self):
+                log.debug("Closed scheduler")
+
+            run_background(self.loop.stop, on_complete)
+            #self.loop.add_callback(sp)
             while self.loop._running:
                 sleep(0.1)
 
@@ -170,8 +175,10 @@ class SchedulerDriver(object):
         }]
         self.accept(offer_ids, operations, filters=filters)
 
+
         log.debug('Launching operations {} with filters {}'.format(
             operations, filters))
+
 
     def accept(self, offer_ids, operations, filters=None):
         """
@@ -192,7 +199,9 @@ class SchedulerDriver(object):
                 "type": "ACCEPT",
                 "accept": accept
             }
+
             self.loop.add_callback(self.subscription.send, payload)
+
             log.debug('Accepts offers {}'.format(offer_ids))
 
     def revive(self):
@@ -336,6 +345,14 @@ class SchedulerDriver(object):
                 agent_id, status
             )
             log.debug("Lost executor %s on agent %s" % (executor_id, agent_id))
+
+    def on_outbound_success(self, event):
+        self.scheduler.on_outbound_success(self, event["request"])
+        log.debug("Got success on outbound %s" % event)
+
+    def on_outbound_error(self, event):
+        self.scheduler.on_outbound_error(self, event["request"],event["endpoint"],event["error"])
+        log.debug("Got error on outbound %s" % event)
 
     def __str__(self):
         return '<%s: scheduler="%s:%s:%s">' % (

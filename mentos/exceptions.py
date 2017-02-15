@@ -12,8 +12,20 @@ class MesosError(Exception):
     pass
 
 
+
+class BadRequest(MesosError):
+    def __init__(self, reason):
+        self.reason = reason
+
+
 class FailedRetry(MesosError):
     pass
+
+class OutBoundError(MesosError):
+    def __init__(self, endpoint,request,errors):
+        self.endpoint = endpoint
+        self.request = request
+        self.errors = errors
 
 
 class ConnectError(MesosError):
