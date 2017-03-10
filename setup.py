@@ -4,7 +4,7 @@ from setuptools import setup
 
 try:
     from pypandoc import convert
-    description = convert('README.md', format='rst')
+    description = convert('README.md', 'rst')
 except ImportError:
     print('Warning: pypandoc module not found, could not convert Markdown to RST')
     with open('README.md', 'r') as fp:
