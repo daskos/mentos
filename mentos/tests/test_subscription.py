@@ -9,7 +9,7 @@ from tornado import gen
 
 
 @pytest.mark.gen_test(run_sync=False, timeout=600)
-def test_subscription(loop, mocker):
+def test_subscription(io_loop, mocker):
     # TODO: split this case to smaller ones
     framework_info = {'user': 'Test',
                       'name': 'test',
@@ -24,7 +24,7 @@ def test_subscription(loop, mocker):
                 Event.SHUTDOWN: handler}
 
     sub = Subscription(framework_info, 'zk://localhost:2181',
-                       '/api/v1/scheduler', handlers, timeout=1, loop=loop)
+                       '/api/v1/scheduler', handlers, timeout=1, loop=io_loop)
     assert sub.state.current_state == States.CLOSED
     yield sub.start()
 
@@ -109,7 +109,7 @@ def test_subscription(loop, mocker):
 
 
 @pytest.mark.gen_test(run_sync=True, timeout=600)
-def test_bad_subscription(loop, mocker):
+def test_bad_subscription(io_loop, mocker):
     framework_info = {}
 
     handler = mocker.Mock()
@@ -119,7 +119,7 @@ def test_bad_subscription(loop, mocker):
                 Event.SHUTDOWN: handler}
 
     sub = Subscription(framework_info, 'zk://localhost:2181',
-                       '/api/v1/scheduler', handlers, timeout=1, loop=loop)
+                       '/api/v1/scheduler', handlers, timeout=1, loop=io_loop)
 
     assert sub.state.current_state == States.CLOSED
     yield sub.start()

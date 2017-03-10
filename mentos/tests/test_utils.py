@@ -86,7 +86,7 @@ def test_master_info_endpoint_no_port():
 @pytest.mark.gen_test(run_sync=False, timeout=60)
 def test_master_info_zk():
     master = utils.MasterInfo('zk://localhost:2181')
-    assert master.detector is None
+    assert master.detector is not None
 
     url = yield master.get_endpoint()
     assert url is None
