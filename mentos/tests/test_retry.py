@@ -1,10 +1,10 @@
 import time
 
-from mock import patch, Mock
-from tornado import testing, concurrent
 import pytest
-from mentos import retry
 from mentos import exceptions as exc
+from mentos import retry
+from mock import Mock, patch
+from tornado import concurrent
 
 
 @pytest.mark.gen_test
@@ -50,89 +50,72 @@ def test_forever():
 
 def test_exponential_backoff():
     policy = retry.RetryPolicy.exponential_backoff()
-
     assert policy.try_limit is None
 
     timings = []
-
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 1
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 2
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 4
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 8
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 16
 
 
 def test_exponential_backoff_with_max_and_base():
     policy = retry.RetryPolicy.exponential_backoff(base=3, maximum=25)
-
     assert policy.try_limit is None
 
     timings = []
-
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 1
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 3
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 9
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 25
 
     wait = policy.sleep_func(timings)
     timings.append(wait)
-
     assert wait == 25
 
 
-@patch.object(retry, "time")
+@patch.object(retry, 'time')
 def test_until_elapsed(mock_time):
-    state = {"now": time.time()}
+    state = {'now': time.time()}
 
     policy = retry.RetryPolicy.until_elapsed(timeout=4)
 
     def increment_time(*args):
-        state["now"] += 1
-        return state["now"]
+        state['now'] += 1
+        return state['now']
 
     mock_time.time.side_effect = increment_time
-
     assert policy.try_limit is None
 
     timings = []
-
     wait = policy.sleep_func(timings)
-    timings.append(state["now"])
-
+    timings.append(state['now'])
     assert wait == 3
     assert policy.sleep_func(timings) == 3
     assert policy.sleep_func(timings) == 2
@@ -154,12 +137,10 @@ def test_failed_enforcement():
 
 @pytest.mark.gen_test
 def test_timeout_failure():
-
     def in_the_past(_):
         return -1
 
     request = Mock()
-
     policy = retry.RetryPolicy(try_limit=3, sleep_func=in_the_past)
 
     yield policy.enforce(request)
@@ -172,21 +153,17 @@ def test_timeout_failure():
 def test_enforcing_wait_time_sleeps(mocker):
     f = concurrent.Future()
     f.set_result(None)
-    mock_gen_sleep = mocker.patch.object(retry.gen, "sleep")
-
+    mock_gen_sleep = mocker.patch.object(retry.gen, 'sleep')
     mock_gen_sleep.return_value = f
 
     def in_the_future(_):
         return 60
 
     request = Mock()
-
     policy = retry.RetryPolicy(try_limit=3, sleep_func=in_the_future)
 
     yield policy.enforce(request)
-
-    assert mock_gen_sleep.called == False
+    assert mock_gen_sleep.called is False
 
     yield policy.enforce(request)
-
     mock_gen_sleep.assert_called_once_with(60)

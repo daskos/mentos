@@ -1,6 +1,5 @@
-from mentos import interface
-
 import pytest
+from mentos import interface
 
 
 @pytest.fixture()

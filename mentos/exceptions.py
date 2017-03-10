@@ -1,21 +1,22 @@
-
 from __future__ import unicode_literals
 import socket
 
 try:
     ConnectionRefusedError = ConnectionRefusedError
-except NameError:# pragma: no cover
-	ConnectionRefusedError = socket.error
+except NameError:  # pragma: no cover
+    ConnectionRefusedError = socket.error
 
 
 class MesosError(Exception):
     pass
+
 
 class DetectorClosed(Exception):
     pass
 
 
 class BadRequest(MesosError):
+
     def __init__(self, reason):
         self.reason = reason
 
@@ -23,8 +24,10 @@ class BadRequest(MesosError):
 class FailedRetry(MesosError):
     pass
 
+
 class OutBoundError(MesosError):
-    def __init__(self, endpoint,request,errors):
+
+    def __init__(self, endpoint, request, errors):
         self.endpoint = endpoint
         self.request = request
         self.errors = errors
@@ -60,6 +63,7 @@ class BadMessage(MesosError):
 
 class ExecutorException(MesosError):
     pass
+
 
 class NoRedirectException(MesosError):
     pass

@@ -1,12 +1,11 @@
 from __future__ import unicode_literals
 
-
 import logging
-
 from collections import deque
 
 from mentos.exceptions import (BadSubscription, ConnectError, ConnectionLost,
-                               MasterRedirect,ConnectionRefusedError,OutBoundError)
+                               ConnectionRefusedError, MasterRedirect,
+                               OutBoundError)
 from mentos.utils import decode, encode, log_errors
 from six import raise_from
 from six.moves.urllib.parse import urlparse
@@ -55,7 +54,7 @@ class Connection(object):
                 self._headers.parse_line(response)
             if self.connection_successful and "Mesos-Stream-Id" in self._headers:
                 self.mesos_stream_id = self._headers["Mesos-Stream-Id"].strip()
-        except ValueError as ex:# pragma: no cover
+        except ValueError:
             log.warn("Problem parsing headers")
 
     @gen.coroutine
@@ -86,16 +85,16 @@ class Connection(object):
             if ex.code == 400:
                 raise_from(BadSubscription(
                     "Got a 400 code from endpoint. Probably bad subscription request"), ex)
-        except ConnectionRefusedError as ex:# pragma: no cover
+        except ConnectionRefusedError as ex:  # pragma: no cover
             log.error("Problem subscribing: %s" % self.endpoint)
-        except Exception as ex:# pragma: no cover
+        except Exception as ex:  # pragma: no cover
             log.error("Unhandled exception in subscription connection")
             log.exception(ex)
 
     def send(self, request):
         f = concurrent.Future()
 
-        if self.closing:# pragma: no cover
+        if self.closing:  # pragma: no cover
             f.set_exception(ConnectError(self.endpoint))
             return f
 
@@ -114,13 +113,13 @@ class Connection(object):
 
             return self.outbound_client.fetch(http_request)
         except TypeError as ex:
-            log.debug( "Could not serialize message {request} because {ex}".format(request=request,ex=ex))
+            log.debug("Could not serialize message {request} because {ex}".format(
+                request=request, ex=ex))
             exc = OutBoundError(self.endpoint, request, ex)
             raise_from(exc, ex)
         except Exception as ex:  # pragma: no cover
             log.error("Unhandled exception in outbound connection")
             log.exception(ex)
-
 
     @gen.coroutine
     def ping(self, path=None):
@@ -129,32 +128,32 @@ class Connection(object):
             method='GET',
             headers=self.headers,
             follow_redirects=False,
-            request_timeout = 100
+            request_timeout=100
         )
         try:
             yield self.outbound_client.fetch(request)
-        except HTTPError as ex:# pragma: no cover
+        except HTTPError as ex:  # pragma: no cover
             if ex.code == 307:
                 raise_from(MasterRedirect(
-                    urlparse(ex.response.headers["location"]).netloc), None)
-        except ConnectionRefusedError as ex:# pragma: no cover
+                    urlparse(ex.response.headers['location']).netloc), None)
+        except ConnectionRefusedError as ex:  # pragma: no cover
             log.debug("Problem reaching: %s" % self.endpoint)
             raise ex
-        except Exception as ex:# pragma: no cover
+        except Exception as ex:  # pragma: no cover
             log.debug("Unhandled exception when connecting to %s",
                       self.endpoint)
             raise ex
 
-    def _handle_chunks(self, chunk):# pragma: no cover
+    def _handle_chunks(self, chunk):  # pragma: no cover
         """ Handle incoming byte chunk stream """
         with log_errors():
             try:
-                log.debug("Buffer length %s" % len(self.buffer))
-                #TODO GOD #life
-                if b"Failed to" in chunk and b'type' not in chunk:
-                    log.warn("Got error from Master: %s" % chunk.decode())
+                log.debug('Buffer length {}'.format(len(self.buffer)))
+                # TODO GOD #life
+                if b'Failed to' in chunk and b'type' not in chunk:
+                    log.warn('Got error from Master: {}'.format(chunk.decode()))
                     return
-                if b"No leader elected" in chunk:
+                if b'No leader elected' in chunk:
                     log.warn(chunk.decode())
                     return
                 self.buffer.append(chunk)
@@ -187,10 +186,9 @@ class Connection(object):
                 msg = decode(b''.join(msgs))
 
                 self.event_handler(msg)
-
-                # yield self.(msg)
             except Exception as ex:
-                log.warn("Problem parsing response from endpoint. Might be a subscription error",ex)
+                log.warn('Problem parsing response from endpoint. '
+                         'Might be a subscription error', ex)
 
     def close(self):
         if self.closing:
