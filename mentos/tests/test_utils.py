@@ -89,10 +89,10 @@ def test_master_info_zk():
     assert master.detector is not None
 
     url = yield master.get_endpoint()
-    assert url is None
-    assert master.info is None
+    assert url is not None
+    assert master.info is not None
     assert master.info['hostname'] == 'localhost'
-    assert master.info['ip'] is None
+    assert master.info['ip'] is not None
     assert master.info['port'] in (5050, 6060, 7070)
 
     with pytest.raises(exc.NoRedirectException):
@@ -100,11 +100,11 @@ def test_master_info_zk():
 
     url_again = yield master.get_endpoint()
 
-    assert url_again is None
+    assert url_again is not None
     assert url == url_again
-    assert master.info is None
+    assert master.info is not None
     assert master.info['hostname'] == 'localhost'
-    assert master.info['ip'] is None
+    assert master.info['ip'] is not None
     assert master.info['port'] in (5050, 6060, 7070)
 
     if master.info['port'] == 5050:  # pragma: no cover
@@ -123,10 +123,10 @@ def test_master_info_zk():
     yield gen.sleep(5)
 
     url_again = yield master.get_endpoint()
-    assert url_again is None
+    assert url_again is not None
     assert url != url_again
-    assert master.info is None
+    assert master.info is not None
     assert master.info['hostname'] == 'localhost'
-    assert master.info['ip'] is None
+    assert master.info['ip'] is not None
     assert master.info['port'] in set(
         [5050, 6060, 7070]) - set([old_info['port']])
