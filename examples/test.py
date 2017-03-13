@@ -20,13 +20,13 @@ def handler(event):
 
 @gen.coroutine
 def b():
-    a = Subscription(sub, "zk://localhost:2181", "/api/v1/scheduler",{"SUBSCRIBED": handler},
+    a = Subscription(sub, "zk://localhost:2181", "/api/v1/scheduler", {"SUBSCRIBED": handler},
                      timeout=1, loop=ioloop.IOLoop.current())
     yield a.start()
 
     try:
         a = yield a.send({})
-    except Exception as ex:
+    except Exception:
         a = 1
     while True:
         yield gen.sleep(1)

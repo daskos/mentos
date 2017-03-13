@@ -9,8 +9,6 @@ from mentos.executor import ExecutorDriver
 from mentos.interface import Executor
 from mentos.utils import decode_data
 
-log = logging.getLogger(__name__)
-
 
 class MinimalExecutor(Executor):
 
@@ -18,26 +16,24 @@ class MinimalExecutor(Executor):
 
         def run_task(task):
             update = {
-                "task_id": {
-                    "value": task["task_id"]["value"]
+                'task_id': {
+                    'value': task['task_id']['value']
                 },
-                "state": 'TASK_RUNNING',
-                "timestamp": int(time.time())
+                'state': 'TASK_RUNNING',
+                'timestamp': int(time.time())
             }
-
             driver.update(update)
 
-            print(decode_data(task["data"]), file=sys.stderr)
+            print(decode_data(task['data']), file=sys.stderr)
             time.sleep(5)
 
             update = {
-                "task_id": {
-                    "value": task["task_id"]["value"]
+                'task_id': {
+                    'value': task['task_id']['value']
                 },
-                "state": 'TASK_FINISHED',
-                "timestamp": time.time()
+                'state': 'TASK_FINISHED',
+                'timestamp': time.time()
             }
-
             driver.update(update)
 
         thread = Thread(target=run_task, args=(task,))
@@ -46,10 +42,6 @@ class MinimalExecutor(Executor):
 
 
 if __name__ == '__main__':
-    import logging
     logging.basicConfig(level=logging.DEBUG)
-    import time
-    # time.sleep(10)
-    # debug
     driver = ExecutorDriver(MinimalExecutor())
     driver.start(block=True)

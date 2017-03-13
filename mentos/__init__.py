@@ -5,9 +5,11 @@ from mentos.executor import ExecutorDriver
 from mentos.subscription import Subscription, Event, Message
 import pkg_resources as _pkg_resources
 
+
 __version__ = _pkg_resources.get_distribution('mentos').version
 
-__all__ = ('SchedulerDriver', 'Subscription', 'Event', 'Message'
-           'ExecutorDriver')
-
-
+__all__ = ('SchedulerDriver',
+           'ExecutorDriver',
+           'Subscription',
+           'Event',
+           'Message')

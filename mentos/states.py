@@ -10,10 +10,10 @@ log = logging.getLogger(__name__)
 
 
 class States(object):
-    SUBSCRIBED = "subscribed"
-    CLOSED = "closed"
-    SUSPENDED = "suspended"
-    SUBSCRIBING = "subscribing"
+    SUBSCRIBED = 'subscribed'
+    CLOSED = 'closed'
+    SUSPENDED = 'suspended'
+    SUBSCRIBING = 'subscribing'
 
 
 class SessionStateMachine(object):
@@ -38,12 +38,12 @@ class SessionStateMachine(object):
     def transition_to(self, state):
         if (self.current_state, state) not in self.valid_transitions:
             raise RuntimeError(
-                "Invalid session state transition: %s -> %s" % (
+                'Invalid session state transition: %s -> %s' % (
                     self.current_state, state
                 )
             )
 
-        log.debug("Session transition: %s -> %s", self.current_state, state)
+        log.debug('Session transition: %s -> %s', self.current_state, state)
 
         self.current_state = state
 

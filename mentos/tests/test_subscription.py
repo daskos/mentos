@@ -1,147 +1,127 @@
-import pytest
-from tornado import gen
-from mock import call
-from mentos import states
-from mentos import exceptions as exc
-from mentos import subscription
-from mentos.utils import encode_data
-from subprocess import Popen,PIPE
 import time
-import random
+from subprocess import PIPE, Popen
 
-# import logging
-#
-# logging.basicConfig(level=logging.DEBUG)
-#
+import pytest
+from mentos.states import States
+from mentos.subscription import Event, Subscription
+from mentos.utils import encode_data
+from tornado import gen
 
 
 @pytest.mark.gen_test(run_sync=False, timeout=600)
 def test_subscription(io_loop, mocker):
-    subm = {
-        "user": "Test",
-        "name": "test",
-        "capabilities": [],
-        "failover_timeout": 100000000,
-        "hostname": "localhost"
-    }
+    # TODO: split this case to smaller ones
+    framework_info = {'user': 'Test',
+                      'name': 'test',
+                      'capabilities': [],
+                      'failover_timeout': 100000000,
+                      'hostname': 'localhost'}
 
     handler = mocker.Mock()
+    handlers = {Event.SUBSCRIBED: handler,
+                Event.HEARTBEAT: handler,
+                Event.OFFERS: handler,
+                Event.SHUTDOWN: handler}
 
-    sub = subscription.Subscription(subm, "zk://localhost:2181", "/api/v1/scheduler", {subscription.Event.SUBSCRIBED: handler,
-                                                                                       subscription.Event.HEARTBEAT: handler,
-                                                                                       subscription.Event.OFFERS:handler,
-                                                                                       subscription.Event.SHUTDOWN: handler},
-                                    timeout=1, loop=io_loop)
-
-    assert sub.state.current_state == states.States.CLOSED
+    sub = Subscription(framework_info, 'zk://localhost:2181',
+                       '/api/v1/scheduler', handlers, timeout=1, loop=io_loop)
+    assert sub.state.current_state == States.CLOSED
     yield sub.start()
 
-    yield sub.ensure_safe([states.States.SUBSCRIBING,states.States.SUBSCRIBED])
+    yield sub.ensure_safe([States.SUBSCRIBING, States.SUBSCRIBED])
+    assert sub.state.current_state in [States.SUBSCRIBING, States.SUBSCRIBED]
 
+    assert 'framework_id' not in sub.framework
+    assert sub.connection is not None
 
-    assert sub.state.current_state in [states.States.SUBSCRIBING,states.States.SUBSCRIBED]
+    # Have to wait for some time for to this to happen
+    yield sub.ensure_safe([States.SUBSCRIBED])
 
-    assert "framework_id" not in sub.framework
-    assert sub.connection != None
+    assert sub.state.current_state == States.SUBSCRIBED
+    assert handler.call_count >= 2
+    assert 'id' in sub.framework
 
-    #Have to wait for some time for to this to happen
-    yield sub.ensure_safe([states.States.SUBSCRIBED])
+    assert handler.call_args_list[0][0][0][
+        'framework_id'] == sub.framework['id']
+    # assert handler.call_args_list[1][0][0]['type'] == 'HEARTBEAT'
 
-    assert sub.state.current_state == states.States.SUBSCRIBED
-
-    assert handler.call_count >=2
-    assert "id" in sub.framework
-
-    assert handler.call_args_list[0][0][0]["framework_id"] == sub.framework["id"]
-    #assert handler.call_args_list[1][0][0]["type"] == "HEARTBEAT"
-
-    first_id = sub.framework["id"]
+    first_id = sub.framework['id']
     first_mesos_id = sub.mesos_stream_id
 
-    assert sub.mesos_stream_id != None
+    assert sub.mesos_stream_id is not None
     yield sub.send({})
-    #with pytest.raises(exc.BadMessage):
-
-
-    resp= yield sub.send({
-
-        "type": "MESSAGE",
-        "message": {
-            "agent_id": {
-                "value": "aa"
-            },
-            "executor_id": {
-                "value": ""
-            },
-            "data": encode_data(b"s")
-        }
-    })
-
-    assert resp.code == 202
-    assert resp.effective_url == sub.connection.endpoint+sub.api_path
-
-    if sub.master_info.info["port"] == 5050:  # pragma: no cover
-        active = "mesos_master_0"
-    elif sub.master_info.info["port"] == 6060:  # pragma: no cover
-        active = "mesos_master_1"
-    else:# pragma: no cover
-        active = "mesos_master_2"
-
-    p = Popen(["docker-compose restart %s" % active], shell=True,
-              stdout=PIPE, stderr=PIPE)
-
-    a = p.wait()
-
-    time.sleep(20)
-    yield gen.sleep(5)
-
-
-    yield sub.ensure_safe([states.States.SUBSCRIBED])
-
-    assert sub.state.current_state == states.States.SUBSCRIBED
-
-    assert first_id == sub.framework["id"]
-    assert first_mesos_id != sub.mesos_stream_id
+    # with pytest.raises(exc.BadMessage):
 
     resp = yield sub.send({
-
-        "type": "MESSAGE",
-        "message": {
-            "agent_id": {
-                "value": "aa"
+        'type': 'MESSAGE',
+        'message': {
+            'agent_id': {
+                'value': 'aa'
             },
-            "executor_id": {
-                "value": ""
+            'executor_id': {
+                'value': ''
             },
-            "data": encode_data(b"s")
+            'data': encode_data(b's')
         }
     })
 
     assert resp.code == 202
     assert resp.effective_url == sub.connection.endpoint + sub.api_path
 
+    if sub.master_info.info['port'] == 5050:  # pragma: no cover
+        active = 'mesos_master_0'
+    elif sub.master_info.info['port'] == 6060:  # pragma: no cover
+        active = 'mesos_master_1'
+    else:  # pragma: no cover
+        active = 'mesos_master_2'
+
+    # TODO: factor out to test utils
+    p = Popen(['docker-compose restart %s' % active], shell=True,
+              stdout=PIPE, stderr=PIPE)
+    p.wait()
+
+    time.sleep(20)
+    yield gen.sleep(5)
+    yield sub.ensure_safe([States.SUBSCRIBED])
+
+    assert sub.state.current_state == States.SUBSCRIBED
+    assert first_id == sub.framework['id']
+    assert first_mesos_id != sub.mesos_stream_id
+
+    resp = yield sub.send({
+        'type': 'MESSAGE',
+        'message': {
+            'agent_id': {
+                'value': 'aa'
+            },
+            'executor_id': {
+                'value': ''
+            },
+            'data': encode_data(b's')
+        }
+    })
+
+    assert resp.code == 202
+    assert resp.effective_url == sub.connection.endpoint + sub.api_path
 
     sub.close()
-    assert sub.closing == True
-
+    assert sub.closing is True
 
 
 @pytest.mark.gen_test(run_sync=True, timeout=600)
 def test_bad_subscription(io_loop, mocker):
-    subm = {
-
-    }
+    framework_info = {}
 
     handler = mocker.Mock()
+    handlers = {Event.SUBSCRIBED: handler,
+                Event.HEARTBEAT: handler,
+                Event.OFFERS: handler,
+                Event.SHUTDOWN: handler}
 
-    sub = subscription.Subscription(subm, "zk://localhost:2181", "/api/v1/scheduler", {subscription.Event.SUBSCRIBED: handler,
-                                                                                       subscription.Event.HEARTBEAT: handler,
-                                                                                       subscription.Event.OFFERS:handler,
-                                                                                       subscription.Event.SHUTDOWN: handler},
-                                    timeout=1, loop=io_loop)
+    sub = Subscription(framework_info, 'zk://localhost:2181',
+                       '/api/v1/scheduler', handlers, timeout=1, loop=io_loop)
 
-    assert sub.state.current_state == states.States.CLOSED
+    assert sub.state.current_state == States.CLOSED
     yield sub.start()
     yield gen.sleep(5)
-    assert sub.state.current_state == states.States.CLOSED
-
+    assert sub.state.current_state == States.CLOSED
