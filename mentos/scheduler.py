@@ -19,7 +19,7 @@ class SchedulerDriver(object):
 
     def __init__(self, scheduler, name, user=getpass.getuser(),
                  master=os.getenv('MESOS_MASTER', 'zk://localhost:2181'),
-                 failover_timeout=100, capabilities=None,
+                 failover_timeout=100, capabilities=None, principal=None, secret=None,
                  implicit_acknowledgements=True, handlers={}, loop=None):
         self.loop = loop or IOLoop()
         self.master = master
@@ -52,6 +52,8 @@ class SchedulerDriver(object):
 
         self.subscription = Subscription(self.framework, self.master,
                                          '/api/v1/scheduler', self.handlers,
+                                         principal=principal,
+                                         secret=secret,
                                          timeout=failover_timeout,
                                          loop=self.loop)
 

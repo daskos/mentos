@@ -8,6 +8,7 @@ from mentos.exceptions import (BadSubscription, ConnectError, ConnectionLost,
                                OutBoundError)
 from mentos.utils import decode, encode, log_errors
 from six import raise_from
+from binascii import b2a_base64
 from six.moves.urllib.parse import urlparse
 from tornado import concurrent, gen
 from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
@@ -26,7 +27,7 @@ class Connection(object):
         'Connection': 'close'
     }
 
-    def __init__(self, endpoint, api_path, event_handler):
+    def __init__(self, endpoint, api_path, event_handler, principal=None, secret=None):
 
         self.endpoint = endpoint
         self.api_path = api_path
@@ -43,6 +44,13 @@ class Connection(object):
 
         self.connection_successful = False
         self._headers = HTTPHeaders()
+
+        if principal is not None and secret is not None:
+            self.headers['Authorization'] = self._basic_credential = 'Basic %s' % (
+                b2a_base64(
+                    ('%s:%s' % (principal, secret)).encode('ascii')
+                ).decode('ascii').strip()
+            )
 
     def _parse_subscription_headers(self, response):
         try:

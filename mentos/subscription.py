@@ -53,7 +53,7 @@ class Message(object):
 
 class Subscription(object):
 
-    def __init__(self, framework, uri, api_path, event_handlers=None,
+    def __init__(self, framework, uri, api_path, event_handlers=None, principal=None, secret=None,
                  timeout=75, retry_policy=RetryPolicy.forever(), loop=None):
         self.loop = loop or IOLoop.current()
 
@@ -78,6 +78,9 @@ class Subscription(object):
         self.tasks = None
         self.updates = None
         self.timeout = timeout
+
+        self.principal = principal
+        self.secret = secret
 
     @gen.coroutine
     def ensure_safe(self, safe_states=[States.SUBSCRIBED, States.SUBSCRIBING]):
@@ -180,7 +183,8 @@ class Subscription(object):
 
     @gen.coroutine
     def make_connection(self, endpoint, api_path):
-        conn = Connection(endpoint, api_path, self._event_handler)
+        conn = Connection(endpoint, api_path, self._event_handler,
+                          principal=self.principal, secret=self.secret)
         try:
             yield conn.ping()
         except MasterRedirect as ex:  # pragma: no cover
