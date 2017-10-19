@@ -4,6 +4,7 @@
 
 [![Build Status](https://travis-ci.org/daskos/mentos.svg?branch=master)](https://travis-ci.org/daskos/mentos)
 [![Coverage Status](https://coveralls.io/repos/github/daskos/mentos/badge.svg)](https://coveralls.io/github/daskos/mentos)
+[![Coding Hours](https://api.gitential.com/accounts/6/projects/119/badges/coding-hours.svg)](https://gitential.com/accounts/6/projects/119/share?uuid=7e476249-f7e2-4838-831f-cc340e3b3e96&utm_source=shield&utm_medium=shield&utm_campaign=119)
 
 The main goal is to provide a low-complexity and feature rich support for pure python Mesos Frameworks, but also to learn things.
 
